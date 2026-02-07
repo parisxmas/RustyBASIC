@@ -13,6 +13,10 @@
 .DS_Store
 Thumbs.db
 
+# Build artifacts
+arrays
+arrays.o
+
 # ESP-IDF build artifacts
 esp-project/build/
 esp-project/managed_components/
