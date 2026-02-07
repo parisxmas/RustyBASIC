@@ -1,0 +1,317 @@
+# RustyBASIC
+
+A QBASIC compiler written in Rust that targets the **ESP32-C3** (RISC-V) microcontroller. Write embedded programs in familiar BASIC syntax instead of C/C++.
+
+```
+.bas source --> [Lexer] --> [Parser] --> [Sema] --> [LLVM Codegen] --> .o (RISC-V)
+                                                                        |
+                                                         ESP-IDF link: .o + C runtime --> .elf
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Rust toolchain (stable)
+- LLVM 18 (`brew install llvm@18` on macOS)
+- ESP-IDF toolchain (for firmware/flash commands)
+- zstd library (`brew install zstd` on macOS)
+
+### Build
+
+```bash
+export LLVM_SYS_180_PREFIX=/opt/homebrew/opt/llvm@18
+export LIBRARY_PATH=/opt/homebrew/opt/zstd/lib
+
+cargo build
+```
+
+### Usage
+
+```bash
+# Check syntax and types
+rustybasic program.bas check
+
+# Dump LLVM IR
+rustybasic program.bas dump-ir [--target host|esp32c3]
+
+# Compile to object file
+rustybasic program.bas build [-o output.o] [--target esp32c3|host]
+
+# Build ESP-IDF firmware
+rustybasic program.bas firmware [--project-dir esp-project]
+
+# Flash to device
+rustybasic program.bas flash --port /dev/ttyUSB0
+```
+
+## Examples
+
+### Hello World
+
+```basic
+' Hello World for RustyBASIC (QBASIC dialect)
+DIM msg AS STRING
+msg = "Hello from RustyBASIC!"
+
+PRINT msg
+PRINT "Running on ESP32-C3"
+
+DIM answer AS INTEGER
+answer = 42
+PRINT "The answer is:"; answer
+
+END
+```
+
+### FizzBuzz
+
+```basic
+DIM i AS INTEGER
+
+FOR i = 1 TO 100
+    SELECT CASE 0
+        CASE i MOD 15
+            PRINT "FizzBuzz"
+        CASE i MOD 3
+            PRINT "Fizz"
+        CASE i MOD 5
+            PRINT "Buzz"
+        CASE ELSE
+            PRINT i
+    END SELECT
+NEXT i
+
+END
+```
+
+### Blink LED (ESP32-C3)
+
+```basic
+CONST LED_PIN = 2
+CONST OUTPUT_MODE = 1
+
+GPIO.MODE LED_PIN, OUTPUT_MODE
+
+DO
+    GPIO.SET LED_PIN, 1
+    PRINT "LED ON"
+    DELAY 500
+
+    GPIO.SET LED_PIN, 0
+    PRINT "LED OFF"
+    DELAY 500
+LOOP
+```
+
+### SUB and FUNCTION Procedures
+
+```basic
+DECLARE SUB ShowResult (label AS STRING, value AS SINGLE)
+DECLARE FUNCTION Add! (a AS SINGLE, b AS SINGLE)
+
+DIM a AS SINGLE
+DIM b AS SINGLE
+
+INPUT "First number: "; a
+INPUT "Second number: "; b
+
+CALL ShowResult("A + B", Add!(a, b))
+CALL ShowResult("A * B", a * b)
+
+END
+
+SUB ShowResult (label AS STRING, value AS SINGLE)
+    PRINT label; " = "; value
+END SUB
+
+FUNCTION Add! (a AS SINGLE, b AS SINGLE)
+    Add! = a + b
+END FUNCTION
+```
+
+### User-Defined Types (Structs)
+
+```basic
+TYPE Point
+    x AS SINGLE
+    y AS SINGLE
+END TYPE
+
+TYPE Rect
+    left AS SINGLE
+    top AS SINGLE
+    width AS SINGLE
+    height AS SINGLE
+END TYPE
+
+DECLARE FUNCTION RectArea! (r AS Rect)
+DECLARE SUB PrintPoint (p AS Point)
+
+DIM origin AS Point
+origin.x = 0.0
+origin.y = 0.0
+
+DIM cursor AS Point
+cursor.x = 10.5
+cursor.y = 20.3
+
+CALL PrintPoint(origin)
+CALL PrintPoint(cursor)
+
+DIM r AS Rect
+r.left = 0
+r.top = 0
+r.width = 100
+r.height = 50
+
+PRINT "Rectangle area:"; RectArea!(r)
+
+END
+
+SUB PrintPoint (p AS Point)
+    PRINT "Point("; p.x; ","; p.y; ")"
+END SUB
+
+FUNCTION RectArea! (r AS Rect)
+    RectArea! = r.width * r.height
+END FUNCTION
+```
+
+### DO...LOOP Variations
+
+```basic
+DIM count AS INTEGER
+DIM sum AS INTEGER
+
+' Pre-condition: DO WHILE...LOOP
+count = 1
+sum = 0
+DO WHILE count <= 10
+    sum = sum + count
+    count = count + 1
+LOOP
+PRINT "Sum 1..10 ="; sum
+
+' Post-condition: DO...LOOP UNTIL
+count = 10
+DO
+    PRINT count;
+    count = count - 1
+LOOP UNTIL count < 1
+PRINT
+
+' EXIT DO
+count = 0
+DO
+    count = count + 1
+    IF count = 5 THEN EXIT DO
+LOOP
+PRINT "Exited at count ="; count
+
+END
+```
+
+## Language Reference
+
+### Types
+
+| Type | Suffix | Description |
+|------|--------|-------------|
+| `INTEGER` | `%` | 32-bit signed integer |
+| `LONG` | `&` | 32-bit signed long |
+| `SINGLE` | `!` | 32-bit float |
+| `DOUBLE` | `#` | 64-bit float (soft-float on ESP32) |
+| `STRING` | `$` | Reference-counted heap string |
+| User type | — | Defined with `TYPE...END TYPE` |
+
+### Operators
+
+| Category | Operators |
+|----------|-----------|
+| Arithmetic | `+` `-` `*` `/` `\` (int div) `^` (power) `MOD` |
+| Comparison | `=` `<>` `<` `>` `<=` `>=` |
+| Logical | `AND` `OR` `NOT` `XOR` |
+
+### Control Flow
+
+| Statement | Description |
+|-----------|-------------|
+| `IF...THEN...ELSEIF...ELSE...END IF` | Conditional branching |
+| `SELECT CASE...CASE...CASE ELSE...END SELECT` | Multi-way branch |
+| `FOR...TO...STEP...NEXT` | Counted loop |
+| `DO WHILE/UNTIL...LOOP` | Pre-condition loop |
+| `DO...LOOP WHILE/UNTIL` | Post-condition loop |
+| `WHILE...WEND` | Legacy while loop |
+| `GOTO label` | Unconditional jump |
+| `GOSUB label` / `RETURN` | Subroutine call/return |
+| `EXIT FOR/DO/SUB/FUNCTION` | Early exit |
+
+### I/O
+
+| Statement | Description |
+|-----------|-------------|
+| `PRINT expr; expr` | Output (`;` = no space, `,` = tab) |
+| `INPUT "prompt"; var` | Read user input |
+| `LINE INPUT "prompt"; var$` | Read entire line |
+
+### Hardware (ESP32-C3)
+
+| Statement | Description |
+|-----------|-------------|
+| `GPIO.MODE pin, mode` | Configure GPIO pin |
+| `GPIO.SET pin, value` | Write digital output |
+| `GPIO.READ pin, var` | Read digital input |
+| `I2C.SETUP bus, sda, scl, freq` | Initialize I2C |
+| `I2C.WRITE addr, data` | Write to I2C device |
+| `I2C.READ addr, len, var` | Read from I2C device |
+| `SPI.SETUP bus, clk, mosi, miso, freq` | Initialize SPI |
+| `SPI.TRANSFER data, var` | SPI send/receive |
+| `WIFI.CONNECT ssid, password` | Connect to WiFi |
+| `WIFI.STATUS var` | Check WiFi status |
+| `WIFI.DISCONNECT` | Disconnect WiFi |
+| `DELAY ms` | Pause execution (milliseconds) |
+
+## Project Structure
+
+```
+RustyBASIC/
+├── Cargo.toml                     # Workspace root
+├── crates/
+│   ├── rustybasic-common/         # Span, source types
+│   ├── rustybasic-lexer/          # logos-based tokenizer
+│   ├── rustybasic-parser/         # Recursive descent parser + AST
+│   ├── rustybasic-sema/           # Type checking, scope resolution
+│   ├── rustybasic-codegen/        # LLVM IR generation (inkwell)
+│   └── rustybasic-driver/         # CLI entry point
+├── runtime/                       # C runtime library (ESP-IDF component)
+│   ├── include/rb_runtime.h
+│   └── src/                       # rb_print.c, rb_string.c, rb_gpio.c, ...
+├── esp-project/                   # ESP-IDF project template for linking
+├── examples/                      # Example .bas programs
+│   ├── hello.bas
+│   ├── fizzbuzz.bas
+│   ├── blink.bas
+│   ├── calculator.bas
+│   ├── structs.bas
+│   ├── doloop.bas
+│   └── wifi_scan.bas
+└── tests/
+```
+
+## Design Decisions
+
+| Area | Choice | Rationale |
+|------|--------|-----------|
+| Lexer | logos crate | Zero-copy, fast, case-insensitive keywords |
+| Parser | Hand-written recursive descent | BASIC's line-oriented grammar needs custom handling |
+| Expressions | Pratt parsing (precedence climbing) | Clean operator precedence |
+| Variables | alloca + LLVM mem2reg | Standard pattern, avoids manual phi nodes |
+| Strings | Refcounted heap (`rb_string_t*`) | Memory-efficient for ESP32-C3's 320KB RAM |
+| Floats | f32 (not f64) | No hardware FPU; f32 is 2x cheaper in soft-float |
+| Runtime | C library linked via ESP-IDF | Direct access to ESP-IDF APIs |
+| Target | `riscv32-unknown-none-elf` | ESP32-C3 = RV32IMC |
+
+## License
+
+MIT

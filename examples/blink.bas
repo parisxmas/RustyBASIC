@@ -1,0 +1,17 @@
+' Blink LED on ESP32-C3 (QBASIC style)
+' GPIO 2 is commonly used for onboard LED
+
+CONST LED_PIN = 2
+CONST OUTPUT_MODE = 1
+
+GPIO.MODE LED_PIN, OUTPUT_MODE
+
+DO
+    GPIO.SET LED_PIN, 1
+    PRINT "LED ON"
+    DELAY 500
+
+    GPIO.SET LED_PIN, 0
+    PRINT "LED OFF"
+    DELAY 500
+LOOP

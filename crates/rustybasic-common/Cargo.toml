@@ -1,0 +1,7 @@
+[package]
+name = "rustybasic-common"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+codespan-reporting = { workspace = true }

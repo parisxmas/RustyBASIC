@@ -1,0 +1,8 @@
+# ESP32-C3 target
+CONFIG_IDF_TARGET="esp32c3"
+
+# Increase main task stack size for BASIC programs
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Enable UART for PRINT/INPUT
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y

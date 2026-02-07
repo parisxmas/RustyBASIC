@@ -1,0 +1,12 @@
+[package]
+name = "rustybasic-parser"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rustybasic-common = { workspace = true }
+rustybasic-lexer = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

@@ -1,0 +1,19 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ESP-IDF build artifacts
+esp-project/build/
+esp-project/managed_components/
+esp-project/sdkconfig.old

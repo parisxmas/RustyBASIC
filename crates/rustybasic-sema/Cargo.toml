@@ -1,0 +1,14 @@
+[package]
+name = "rustybasic-sema"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rustybasic-common = { workspace = true }
+rustybasic-parser = { workspace = true }
+thiserror = { workspace = true }
+codespan-reporting = { workspace = true }
+
+[dev-dependencies]
+rustybasic-lexer = { workspace = true }
+insta = { workspace = true }

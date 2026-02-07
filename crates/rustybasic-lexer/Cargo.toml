@@ -1,0 +1,11 @@
+[package]
+name = "rustybasic-lexer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rustybasic-common = { workspace = true }
+logos = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

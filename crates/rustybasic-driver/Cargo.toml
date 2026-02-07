@@ -1,0 +1,19 @@
+[package]
+name = "rustybasic-driver"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "rustybasic"
+path = "src/main.rs"
+
+[dependencies]
+rustybasic-common = { workspace = true }
+rustybasic-lexer = { workspace = true }
+rustybasic-parser = { workspace = true }
+rustybasic-sema = { workspace = true }
+rustybasic-codegen = { workspace = true }
+clap = { workspace = true }
+codespan-reporting = { workspace = true }
+anyhow = { workspace = true }
+inkwell = { workspace = true }
