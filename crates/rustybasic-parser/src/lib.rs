@@ -405,12 +405,45 @@ impl Parser {
         }
     }
 
-    /// Parse an identifier-leading statement: assignment, field assign, or sub call.
+    /// Parse an identifier-leading statement: assignment, array assign, field assign, or sub call.
     fn parse_ident_statement(&mut self) -> ParseResult<Statement> {
         let start = self.current_span();
         let (name, var_type) = self.expect_variable()?;
 
-        // Assignment: name = expr
+        // Array element assignment or sub call with parens: name(args...) = expr  OR  name(args...)
+        if self.eat(TokenKind::LParen) {
+            let mut indices = Vec::new();
+            if !self.check(TokenKind::RParen) {
+                indices.push(self.parse_expr()?);
+                while self.eat(TokenKind::Comma) {
+                    indices.push(self.parse_expr()?);
+                }
+            }
+            self.expect(TokenKind::RParen)?;
+
+            if self.eat(TokenKind::Eq) {
+                // Array element assignment: arr(i, j) = expr
+                let expr = self.parse_expr()?;
+                let span = start.merge(expr.span());
+                return Ok(Statement::ArrayAssign {
+                    name,
+                    var_type,
+                    indices,
+                    expr,
+                    span,
+                });
+            }
+
+            // Otherwise it's a SUB call with parens: SubName(args...)
+            let span = start.merge(self.prev_span());
+            return Ok(Statement::CallSub {
+                name,
+                args: indices,
+                span,
+            });
+        }
+
+        // Scalar assignment: name = expr
         if self.eat(TokenKind::Eq) {
             let expr = self.parse_expr()?;
             let span = start.merge(expr.span());
@@ -1725,5 +1758,47 @@ mod tests {
         let prog = parse_str("GPIO.MODE 2, 1\nDELAY 500").unwrap();
         assert!(matches!(&prog.body[0], Statement::GpioMode { .. }));
         assert!(matches!(&prog.body[1], Statement::Delay { .. }));
+    }
+
+    #[test]
+    fn test_dim_array_1d() {
+        let prog = parse_str("DIM arr(10) AS INTEGER").unwrap();
+        if let Statement::Dim { dimensions, var_type, .. } = &prog.body[0] {
+            assert_eq!(dimensions.len(), 1);
+            assert_eq!(*var_type, QBType::Integer);
+        } else {
+            panic!("expected Dim");
+        }
+    }
+
+    #[test]
+    fn test_dim_array_2d() {
+        let prog = parse_str("DIM matrix(3, 4) AS SINGLE").unwrap();
+        if let Statement::Dim { dimensions, var_type, .. } = &prog.body[0] {
+            assert_eq!(dimensions.len(), 2);
+            assert_eq!(*var_type, QBType::Single);
+        } else {
+            panic!("expected Dim");
+        }
+    }
+
+    #[test]
+    fn test_array_assign() {
+        let prog = parse_str("arr(0) = 10").unwrap();
+        assert!(matches!(&prog.body[0], Statement::ArrayAssign { .. }));
+        if let Statement::ArrayAssign { name, indices, .. } = &prog.body[0] {
+            assert_eq!(name, "ARR");
+            assert_eq!(indices.len(), 1);
+        }
+    }
+
+    #[test]
+    fn test_array_assign_2d() {
+        let prog = parse_str("matrix(1, 2) = 99.5").unwrap();
+        assert!(matches!(&prog.body[0], Statement::ArrayAssign { .. }));
+        if let Statement::ArrayAssign { name, indices, .. } = &prog.body[0] {
+            assert_eq!(name, "MATRIX");
+            assert_eq!(indices.len(), 2);
+        }
     }
 }

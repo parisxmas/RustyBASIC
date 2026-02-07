@@ -292,6 +292,15 @@ pub enum Statement {
         ms: Expr,
         span: Span,
     },
+
+    /// Array element assignment: arr(i, j) = expr
+    ArrayAssign {
+        name: String,
+        var_type: QBType,
+        indices: Vec<Expr>,
+        expr: Expr,
+        span: Span,
+    },
 }
 
 // ── DO...LOOP condition ─────────────────────────────────

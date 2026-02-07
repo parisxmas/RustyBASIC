@@ -767,6 +767,37 @@ impl SemanticAnalyzer {
             Statement::Delay { ms, .. } => {
                 self.check_expr(ms);
             }
+            Statement::ArrayAssign {
+                name,
+                var_type: _,
+                indices,
+                expr,
+                span,
+            } => {
+                for idx in indices {
+                    self.check_expr(idx);
+                }
+                let expr_type = self.check_expr(expr);
+                if let Some(info) = self.variables.get(name) {
+                    if !info.is_array {
+                        self.errors.push(SemaError {
+                            span: *span,
+                            message: format!("{name} is not an array"),
+                        });
+                    } else if info.dimensions != indices.len() {
+                        self.errors.push(SemaError {
+                            span: *span,
+                            message: format!(
+                                "array {name} has {} dimensions, but {} indices provided",
+                                info.dimensions,
+                                indices.len()
+                            ),
+                        });
+                    }
+                    // Type-check RHS against array element type
+                    self.check_type_assignment(name, &info.qb_type.clone(), expr_type.as_ref(), *span);
+                }
+            }
         }
     }
 
@@ -879,6 +910,22 @@ impl SemanticAnalyzer {
             Expr::FnCall { name, args, span } => {
                 for arg in args {
                     self.check_expr(arg);
+                }
+                // Check if this is actually an array access (parser emits FnCall for arr(i))
+                if let Some(info) = self.variables.get(name).cloned() {
+                    if info.is_array {
+                        if info.dimensions != args.len() {
+                            self.errors.push(SemaError {
+                                span: *span,
+                                message: format!(
+                                    "array {name} has {} dimensions, but {} indices provided",
+                                    info.dimensions,
+                                    args.len()
+                                ),
+                            });
+                        }
+                        return Some(info.qb_type.clone());
+                    }
                 }
                 // Check if it matches a known FUNCTION definition
                 if let Some(func_info) = self.functions.get(name).cloned() {
@@ -1395,6 +1442,28 @@ mod tests {
     #[test]
     fn test_gpio_delay() {
         let result = analyze_str("GPIO.MODE 2, 1\nDELAY 500");
+        assert!(!result.has_errors(), "errors: {:?}", result.errors);
+    }
+
+    // ── Array tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_array_dimension_mismatch() {
+        let result = analyze_str("DIM arr(10) AS INTEGER\narr(1, 2) = 5");
+        assert!(result.has_errors());
+        assert!(result.errors.iter().any(|e| e.message.contains("1 dimensions, but 2 indices")));
+    }
+
+    #[test]
+    fn test_array_assign_non_array() {
+        let result = analyze_str("DIM x AS INTEGER\nx(0) = 5");
+        assert!(result.has_errors());
+        assert!(result.errors.iter().any(|e| e.message.contains("is not an array")));
+    }
+
+    #[test]
+    fn test_array_valid_usage() {
+        let result = analyze_str("DIM arr(5) AS INTEGER\narr(0) = 10\nPRINT arr(0)");
         assert!(!result.has_errors(), "errors: {:?}", result.errors);
     }
 }

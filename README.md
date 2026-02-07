@@ -178,6 +178,22 @@ FUNCTION RectArea! (r AS Rect)
 END FUNCTION
 ```
 
+### Arrays
+
+```basic
+' 1D array (indices 0..5)
+DIM arr(5) AS INTEGER
+arr(0) = 10
+arr(1) = 20
+arr(2) = 30
+PRINT arr(0); arr(1); arr(2)
+
+' 2D array (indices 0..2 x 0..3)
+DIM matrix(2, 3) AS SINGLE
+matrix(1, 2) = 99.5
+PRINT "Matrix(1,2) ="; matrix(1, 2)
+```
+
 ### DO...LOOP Variations
 
 ```basic
@@ -233,6 +249,17 @@ END
 | Comparison | `=` `<>` `<` `>` `<=` `>=` |
 | Logical | `AND` `OR` `NOT` `XOR` |
 
+### Arrays
+
+| Statement | Description |
+|-----------|-------------|
+| `DIM arr(N) AS type` | Declare 1D array with indices 0..N |
+| `DIM mat(R, C) AS type` | Declare multi-dimensional array |
+| `arr(i) = expr` | Assign to array element |
+| `arr(i)` | Read array element (in expressions) |
+
+Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at runtime.
+
 ### Control Flow
 
 | Statement | Description |
@@ -286,13 +313,14 @@ RustyBASIC/
 │   └── rustybasic-driver/         # CLI entry point
 ├── runtime/                       # C runtime library (ESP-IDF component)
 │   ├── include/rb_runtime.h
-│   └── src/                       # rb_print.c, rb_string.c, rb_gpio.c, ...
+│   └── src/                       # rb_print.c, rb_string.c, rb_array.c, rb_gpio.c, ...
 ├── esp-project/                   # ESP-IDF project template for linking
 ├── examples/                      # Example .bas programs
 │   ├── hello.bas
 │   ├── fizzbuzz.bas
 │   ├── blink.bas
 │   ├── calculator.bas
+│   ├── arrays.bas
 │   ├── structs.bas
 │   ├── doloop.bas
 │   └── wifi_scan.bas

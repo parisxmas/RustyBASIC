@@ -47,6 +47,14 @@ impl TargetConfig {
     }
 }
 
+/// Array metadata for codegen.
+struct ArrayInfo<'ctx> {
+    data_ptr_alloca: PointerValue<'ctx>,
+    dim_size_allocas: Vec<PointerValue<'ctx>>,
+    total_size_alloca: PointerValue<'ctx>,
+    element_vt: VarType,
+}
+
 pub struct Codegen<'ctx> {
     context: &'ctx LlvmContext,
     module: Module<'ctx>,
@@ -60,6 +68,9 @@ pub struct Codegen<'ctx> {
 
     // Variables: name -> (alloca pointer, VarType)
     variables: HashMap<String, (PointerValue<'ctx>, VarType)>,
+
+    // Arrays: name -> ArrayInfo
+    arrays: HashMap<String, ArrayInfo<'ctx>>,
 
     // Runtime function declarations
     rt_print_int: Option<FunctionValue<'ctx>>,
@@ -87,6 +98,9 @@ pub struct Codegen<'ctx> {
     rt_wifi_status: Option<FunctionValue<'ctx>>,
     rt_wifi_disconnect: Option<FunctionValue<'ctx>>,
     rt_powf: Option<FunctionValue<'ctx>>,
+    rt_array_alloc: Option<FunctionValue<'ctx>>,
+    rt_array_free: Option<FunctionValue<'ctx>>,
+    rt_array_bounds_check: Option<FunctionValue<'ctx>>,
 
     // GOSUB support
     gosub_return_var: Option<PointerValue<'ctx>>,
@@ -134,6 +148,7 @@ impl<'ctx> Codegen<'ctx> {
             f32_type,
             ptr_type,
             variables: HashMap::new(),
+            arrays: HashMap::new(),
             rt_print_int: None,
             rt_print_float: None,
             rt_print_string: None,
@@ -159,6 +174,9 @@ impl<'ctx> Codegen<'ctx> {
             rt_wifi_status: None,
             rt_wifi_disconnect: None,
             rt_powf: None,
+            rt_array_alloc: None,
+            rt_array_free: None,
+            rt_array_bounds_check: None,
             gosub_return_var: None,
             gosub_dispatch_bb: None,
             gosub_counter: 0,
@@ -366,6 +384,33 @@ impl<'ctx> Codegen<'ctx> {
                 &[
                     BasicMetadataTypeEnum::from(f32_t),
                     BasicMetadataTypeEnum::from(f32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_array_alloc = Some(self.module.add_function(
+            "rb_array_alloc",
+            ptr_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_array_free = Some(self.module.add_function(
+            "rb_array_free",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_array_bounds_check = Some(self.module.add_function(
+            "rb_array_bounds_check",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
                 ],
                 false,
             ),
@@ -590,6 +635,7 @@ impl<'ctx> Codegen<'ctx> {
         self.builder.position_at_end(entry_bb);
 
         let saved_vars = std::mem::take(&mut self.variables);
+        let saved_arrays = std::mem::take(&mut self.arrays);
         let saved_fn = self.current_function;
         let saved_exit = self.current_exit_bb;
         let saved_labels = std::mem::take(&mut self.label_bbs);
@@ -624,6 +670,7 @@ impl<'ctx> Codegen<'ctx> {
         self.builder.build_return(None)?;
 
         self.variables = saved_vars;
+        self.arrays = saved_arrays;
         self.current_function = saved_fn;
         self.current_exit_bb = saved_exit;
         self.label_bbs = saved_labels;
@@ -636,6 +683,7 @@ impl<'ctx> Codegen<'ctx> {
         self.builder.position_at_end(entry_bb);
 
         let saved_vars = std::mem::take(&mut self.variables);
+        let saved_arrays = std::mem::take(&mut self.arrays);
         let saved_fn = self.current_function;
         let saved_exit = self.current_exit_bb;
         let saved_labels = std::mem::take(&mut self.label_bbs);
@@ -692,6 +740,7 @@ impl<'ctx> Codegen<'ctx> {
         self.builder.build_return(Some(&ret_val))?;
 
         self.variables = saved_vars;
+        self.arrays = saved_arrays;
         self.current_function = saved_fn;
         self.current_exit_bb = saved_exit;
         self.label_bbs = saved_labels;
@@ -743,8 +792,80 @@ impl<'ctx> Codegen<'ctx> {
                     self.builder.position_at_end(bb);
                 }
             }
-            Statement::Dim { name, var_type, .. } => {
-                if !self.variables.contains_key(name) {
+            Statement::Dim {
+                name,
+                var_type,
+                dimensions,
+                ..
+            } => {
+                if !dimensions.is_empty() {
+                    // Array DIM — allocate on heap
+                    if !self.arrays.contains_key(name) {
+                        let vt = Self::qb_to_var(var_type);
+                        let element_size: i32 = match vt {
+                            VarType::Integer => 4,
+                            VarType::Float => 4,
+                            VarType::String => 8, // pointer size
+                        };
+
+                        // Evaluate each dimension, compute size = dim_val + 1 (QBASIC: DIM arr(N) = 0..N)
+                        let mut dim_size_allocas = Vec::new();
+                        let mut total_val = self.i32_type.const_int(1, false);
+                        for (di, dim_expr) in dimensions.iter().enumerate() {
+                            let dim_val = self.compile_expr(dim_expr, VarType::Integer)?.into_int_value();
+                            let size = self.builder.build_int_add(
+                                dim_val,
+                                self.i32_type.const_int(1, false),
+                                &format!("dim_size_{di}"),
+                            )?;
+                            let size_alloca = self.builder.build_alloca(
+                                self.i32_type.as_basic_type_enum(),
+                                &format!("{name}_dim{di}_size"),
+                            )?;
+                            self.builder.build_store(size_alloca, size)?;
+                            dim_size_allocas.push(size_alloca);
+                            total_val = self.builder.build_int_mul(total_val, size, "total_mul")?;
+                        }
+
+                        // Store total size
+                        let total_alloca = self.builder.build_alloca(
+                            self.i32_type.as_basic_type_enum(),
+                            &format!("{name}_total"),
+                        )?;
+                        self.builder.build_store(total_alloca, total_val)?;
+
+                        // Call rb_array_alloc(element_size, total_elements)
+                        let elem_sz = self.i32_type.const_int(element_size as u64, false);
+                        let heap_ptr = self
+                            .builder
+                            .build_call(
+                                self.rt_array_alloc.unwrap(),
+                                &[elem_sz.into(), total_val.into()],
+                                &format!("{name}_data"),
+                            )?
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_pointer_value();
+
+                        let data_alloca = self.builder.build_alloca(
+                            self.ptr_type.as_basic_type_enum(),
+                            &format!("{name}_ptr"),
+                        )?;
+                        self.builder.build_store(data_alloca, heap_ptr)?;
+
+                        self.arrays.insert(
+                            name.clone(),
+                            ArrayInfo {
+                                data_ptr_alloca: data_alloca,
+                                dim_size_allocas,
+                                total_size_alloca: total_alloca,
+                                element_vt: vt,
+                            },
+                        );
+                    }
+                } else if !self.variables.contains_key(name) {
+                    // Scalar DIM
                     let vt = Self::qb_to_var(var_type);
                     let llvm_type = self.var_llvm_type(vt);
                     let alloca = self.builder.build_alloca(llvm_type, name)?;
@@ -1288,6 +1409,65 @@ impl<'ctx> Codegen<'ctx> {
                 let cont = self.context.append_basic_block(function, "after_exit");
                 self.builder.position_at_end(cont);
             }
+            Statement::ArrayAssign {
+                name,
+                var_type: _,
+                indices,
+                expr,
+                ..
+            } => {
+                if let Some(arr_info) = self.arrays.get(name) {
+                    // Copy values out to avoid borrow conflict
+                    let element_vt = arr_info.element_vt;
+                    let total_alloca = arr_info.total_size_alloca;
+                    let data_alloca = arr_info.data_ptr_alloca;
+
+                    let linear_idx = self.compile_array_linear_index(name, indices)?;
+
+                    // Bounds check
+                    let total = self
+                        .builder
+                        .build_load(self.i32_type, total_alloca, "total_sz")?
+                        .into_int_value();
+                    self.builder.build_call(
+                        self.rt_array_bounds_check.unwrap(),
+                        &[linear_idx.into(), total.into()],
+                        "",
+                    )?;
+
+                    // GEP to element
+                    let data_ptr = self
+                        .builder
+                        .build_load(self.ptr_type, data_alloca, "data_ptr")?
+                        .into_pointer_value();
+                    let elem_llvm_type = self.var_llvm_type(element_vt);
+                    let elem_ptr = unsafe {
+                        self.builder.build_gep(
+                            elem_llvm_type,
+                            data_ptr,
+                            &[linear_idx],
+                            "elem_ptr",
+                        )?
+                    };
+
+                    // For string arrays, release old value
+                    if element_vt == VarType::String {
+                        let old_val = self
+                            .builder
+                            .build_load(self.ptr_type, elem_ptr, "old_str")?
+                            .into_pointer_value();
+                        self.builder.build_call(
+                            self.rt_string_release.unwrap(),
+                            &[old_val.into()],
+                            "",
+                        )?;
+                    }
+
+                    // Store new value
+                    let val = self.compile_expr(expr, element_vt)?;
+                    self.builder.build_store(elem_ptr, val)?;
+                }
+            }
             Statement::Rem { .. } => {}
             Statement::GpioMode { pin, mode, .. } => {
                 let pin_val = self.compile_expr_as_i32(pin)?;
@@ -1448,6 +1628,74 @@ impl<'ctx> Codegen<'ctx> {
             self.variables.insert(name.to_string(), (alloca, vt));
         }
         Ok(())
+    }
+
+    // ── Array helpers ────────────────────────────────────────
+
+    fn compile_array_linear_index(
+        &mut self,
+        name: &str,
+        indices: &[Expr],
+    ) -> Result<IntValue<'ctx>> {
+        let dim_size_allocas: Vec<PointerValue<'ctx>> =
+            self.arrays.get(name).unwrap().dim_size_allocas.clone();
+
+        // Row-major linearization: linear = idx[0]; for d in 1..N: linear = linear * dim_sizes[d] + idx[d]
+        let first_idx = self.compile_expr(&indices[0], VarType::Integer)?.into_int_value();
+        let mut linear = first_idx;
+        for d in 1..indices.len() {
+            let dim_size = self
+                .builder
+                .build_load(self.i32_type, dim_size_allocas[d], &format!("dsz_{d}"))?
+                .into_int_value();
+            linear = self.builder.build_int_mul(linear, dim_size, "lin_mul")?;
+            let idx_d = self.compile_expr(&indices[d], VarType::Integer)?.into_int_value();
+            linear = self.builder.build_int_add(linear, idx_d, "lin_add")?;
+        }
+        Ok(linear)
+    }
+
+    fn compile_array_read(
+        &mut self,
+        name: &str,
+        indices: &[Expr],
+        target_type: VarType,
+    ) -> Result<BasicValueEnum<'ctx>> {
+        let (element_vt, total_alloca, data_alloca) = {
+            let arr_info = self.arrays.get(name).unwrap();
+            (arr_info.element_vt, arr_info.total_size_alloca, arr_info.data_ptr_alloca)
+        };
+
+        let linear_idx = self.compile_array_linear_index(name, indices)?;
+
+        // Bounds check
+        let total = self
+            .builder
+            .build_load(self.i32_type, total_alloca, "total_sz")?
+            .into_int_value();
+        self.builder.build_call(
+            self.rt_array_bounds_check.unwrap(),
+            &[linear_idx.into(), total.into()],
+            "",
+        )?;
+
+        // GEP to element
+        let data_ptr = self
+            .builder
+            .build_load(self.ptr_type, data_alloca, "data_ptr")?
+            .into_pointer_value();
+        let elem_llvm_type = self.var_llvm_type(element_vt);
+        let elem_ptr = unsafe {
+            self.builder.build_gep(
+                elem_llvm_type,
+                data_ptr,
+                &[linear_idx],
+                "elem_ptr",
+            )?
+        };
+
+        let val = self.builder.build_load(elem_llvm_type, elem_ptr, "arr_val")?;
+        self.coerce_value(val, element_vt, target_type)
     }
 
     // ── SELECT CASE test compilation ────────────────────────
@@ -1681,6 +1929,10 @@ impl<'ctx> Codegen<'ctx> {
                 }
             },
             Expr::FnCall { name, args, .. } => {
+                // Check if this is actually an array read
+                if self.arrays.contains_key(name) {
+                    return self.compile_array_read(name, args, target_type);
+                }
                 if let Some(&func) = self.user_functions.get(name) {
                     let mut arg_vals: Vec<BasicMetadataValueEnum> = Vec::new();
                     let param_types = func.get_type().get_param_types();
@@ -1726,8 +1978,14 @@ impl<'ctx> Codegen<'ctx> {
                     }
                 }
             }
-            Expr::ArrayAccess { .. } => {
-                Ok(self.i32_type.const_zero().as_basic_value_enum())
+            Expr::ArrayAccess {
+                name, indices, ..
+            } => {
+                if self.arrays.contains_key(name) {
+                    self.compile_array_read(name, indices, target_type)
+                } else {
+                    Ok(self.i32_type.const_zero().as_basic_value_enum())
+                }
             }
         }
     }
@@ -1979,6 +2237,15 @@ impl<'ctx> Codegen<'ctx> {
             }
             Expr::UnaryOp { operand, .. } => self.infer_expr_type(operand),
             Expr::FnCall { name, .. } => {
+                // Check if this is an array read
+                if let Some(arr_info) = self.arrays.get(name) {
+                    return arr_info.element_vt;
+                }
+                if let Some(var_info) = self.sema.variables.get(name) {
+                    if var_info.is_array {
+                        return Self::qb_to_var(&var_info.qb_type);
+                    }
+                }
                 if let Some(func_info) = self.sema.functions.get(name) {
                     return Self::qb_to_var(&func_info.return_type);
                 }
