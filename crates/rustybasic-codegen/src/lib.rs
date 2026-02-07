@@ -108,6 +108,7 @@ pub struct Codegen<'ctx> {
     rt_array_alloc: Option<FunctionValue<'ctx>>,
     rt_array_free: Option<FunctionValue<'ctx>>,
     rt_array_bounds_check: Option<FunctionValue<'ctx>>,
+    rt_array_check_dim_size: Option<FunctionValue<'ctx>>,
 
     // GOSUB support
     gosub_return_var: Option<PointerValue<'ctx>>,
@@ -184,6 +185,7 @@ impl<'ctx> Codegen<'ctx> {
             rt_array_alloc: None,
             rt_array_free: None,
             rt_array_bounds_check: None,
+            rt_array_check_dim_size: None,
             gosub_return_var: None,
             gosub_dispatch_bb: None,
             gosub_counter: 0,
@@ -414,6 +416,17 @@ impl<'ctx> Codegen<'ctx> {
         ));
         self.rt_array_bounds_check = Some(self.module.add_function(
             "rb_array_bounds_check",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_array_check_dim_size = Some(self.module.add_function(
+            "rb_array_check_dim_size",
             void_t.fn_type(
                 &[
                     BasicMetadataTypeEnum::from(i32_t),
@@ -820,6 +833,15 @@ impl<'ctx> Codegen<'ctx> {
                         let mut total_val = self.i32_type.const_int(1, false);
                         for (di, dim_expr) in dimensions.iter().enumerate() {
                             let dim_val = self.compile_expr(dim_expr, VarType::Integer)?.into_int_value();
+                            // Check for negative dimension size
+                            self.builder.build_call(
+                                self.rt_array_check_dim_size.unwrap(),
+                                &[
+                                    dim_val.into(),
+                                    self.i32_type.const_int(di as u64 + 1, false).into(),
+                                ],
+                                "",
+                            )?;
                             let size = self.builder.build_int_add(
                                 dim_val,
                                 self.i32_type.const_int(1, false),
@@ -833,6 +855,31 @@ impl<'ctx> Codegen<'ctx> {
                             dim_size_allocas.push(size_alloca);
                             total_val = self.builder.build_int_mul(total_val, size, "total_mul")?;
                         }
+
+                        // Overflow check: if total_val <= 0 after multiplications, panic
+                        let overflow_cond = self.builder.build_int_compare(
+                            IntPredicate::SLE,
+                            total_val,
+                            self.i32_type.const_zero(),
+                            "overflow_check",
+                        )?;
+                        let overflow_bb = self.context.append_basic_block(function, "arr_overflow");
+                        let ok_bb = self.context.append_basic_block(function, "arr_ok");
+                        self.builder.build_conditional_branch(overflow_cond, overflow_bb, ok_bb)?;
+
+                        self.builder.position_at_end(overflow_bb);
+                        let msg = self.builder.build_global_string_ptr(
+                            "array total size overflow",
+                            "overflow_msg",
+                        )?;
+                        self.builder.build_call(
+                            self.rt_panic.unwrap(),
+                            &[msg.as_pointer_value().into()],
+                            "",
+                        )?;
+                        self.builder.build_unreachable()?;
+
+                        self.builder.position_at_end(ok_bb);
 
                         // Store total size
                         let total_alloca = self.builder.build_alloca(

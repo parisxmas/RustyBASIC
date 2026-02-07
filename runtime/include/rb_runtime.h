@@ -68,6 +68,7 @@ void rb_wifi_disconnect(void);
 
 /* ── Arrays ───────────────────────────────────────────── */
 
+void rb_array_check_dim_size(int32_t dim_value, int32_t dim_index);
 void* rb_array_alloc(int32_t element_size, int32_t total_elements);
 void rb_array_free(void* ptr);
 void rb_array_bounds_check(int32_t index, int32_t size);

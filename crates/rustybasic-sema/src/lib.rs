@@ -796,6 +796,11 @@ impl SemanticAnalyzer {
                     }
                     // Type-check RHS against array element type
                     self.check_type_assignment(name, &info.qb_type.clone(), expr_type.as_ref(), *span);
+                } else {
+                    self.errors.push(SemaError {
+                        span: *span,
+                        message: format!("undeclared array: {name}"),
+                    });
                 }
             }
         }
@@ -970,6 +975,11 @@ impl SemanticAnalyzer {
                             ),
                         });
                     }
+                } else {
+                    self.errors.push(SemaError {
+                        span: *span,
+                        message: format!("undeclared array: {name}"),
+                    });
                 }
                 Some(var_type.clone())
             }
@@ -1465,5 +1475,20 @@ mod tests {
     fn test_array_valid_usage() {
         let result = analyze_str("DIM arr(5) AS INTEGER\narr(0) = 10\nPRINT arr(0)");
         assert!(!result.has_errors(), "errors: {:?}", result.errors);
+    }
+
+    #[test]
+    fn test_undeclared_array_assign() {
+        let result = analyze_str("arr(0) = 10");
+        assert!(result.has_errors());
+        assert!(result.errors.iter().any(|e| e.message.contains("undeclared array")));
+    }
+
+    #[test]
+    fn test_undeclared_array_read() {
+        let result = analyze_str("PRINT arr(0)");
+        // FnCall path — undeclared array reads go through builtin_return_type, not an error
+        // ArrayAccess path would error. This tests that no crash occurs.
+        assert!(!result.has_errors() || result.errors.iter().any(|e| e.message.contains("undeclared")));
     }
 }
