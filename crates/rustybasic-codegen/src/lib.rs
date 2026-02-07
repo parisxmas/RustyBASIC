@@ -40,9 +40,16 @@ impl TargetConfig {
     /// Native host target (for testing).
     pub fn host() -> Self {
         Self {
-            triple: TargetMachine::get_default_triple().to_string(),
-            cpu: TargetMachine::get_host_cpu_name().to_string(),
-            features: TargetMachine::get_host_cpu_features().to_string(),
+            triple: TargetMachine::get_default_triple()
+                .as_str()
+                .to_string_lossy()
+                .into_owned(),
+            cpu: TargetMachine::get_host_cpu_name()
+                .to_string_lossy()
+                .into_owned(),
+            features: TargetMachine::get_host_cpu_features()
+                .to_string_lossy()
+                .into_owned(),
         }
     }
 }
