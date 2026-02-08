@@ -849,6 +849,46 @@ impl SemanticAnalyzer {
             } => {
                 self.declare_or_check_var(target, var_type, *span);
             }
+            Statement::BleInit { name, .. } => {
+                self.check_expr(name);
+            }
+            Statement::BleAdvertise { mode, .. } => {
+                self.check_expr(mode);
+            }
+            Statement::BleScan {
+                target, var_type, span,
+            } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::BleSend { data, .. } => {
+                self.check_expr(data);
+            }
+            Statement::BleReceive {
+                target, var_type, span,
+            } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::JsonGet {
+                json, key, target, var_type, span,
+            } => {
+                self.check_expr(json);
+                self.check_expr(key);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::JsonSet {
+                json, key, value, target, var_type, span,
+            } => {
+                self.check_expr(json);
+                self.check_expr(key);
+                self.check_expr(value);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::JsonCount {
+                json, target, var_type, span,
+            } => {
+                self.check_expr(json);
+                self.declare_or_check_var(target, var_type, *span);
+            }
             Statement::ArrayAssign {
                 name,
                 var_type: _,

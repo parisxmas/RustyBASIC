@@ -121,6 +121,14 @@ pub struct Codegen<'ctx> {
     rt_mqtt_publish: Option<FunctionValue<'ctx>>,
     rt_mqtt_subscribe: Option<FunctionValue<'ctx>>,
     rt_mqtt_receive: Option<FunctionValue<'ctx>>,
+    rt_ble_init: Option<FunctionValue<'ctx>>,
+    rt_ble_advertise: Option<FunctionValue<'ctx>>,
+    rt_ble_scan: Option<FunctionValue<'ctx>>,
+    rt_ble_send: Option<FunctionValue<'ctx>>,
+    rt_ble_receive: Option<FunctionValue<'ctx>>,
+    rt_json_get: Option<FunctionValue<'ctx>>,
+    rt_json_set: Option<FunctionValue<'ctx>>,
+    rt_json_count: Option<FunctionValue<'ctx>>,
     rt_powf: Option<FunctionValue<'ctx>>,
     rt_array_alloc: Option<FunctionValue<'ctx>>,
     rt_array_free: Option<FunctionValue<'ctx>>,
@@ -243,6 +251,14 @@ impl<'ctx> Codegen<'ctx> {
             rt_mqtt_publish: None,
             rt_mqtt_subscribe: None,
             rt_mqtt_receive: None,
+            rt_ble_init: None,
+            rt_ble_advertise: None,
+            rt_ble_scan: None,
+            rt_ble_send: None,
+            rt_ble_receive: None,
+            rt_json_get: None,
+            rt_json_set: None,
+            rt_json_count: None,
             rt_powf: None,
             rt_array_alloc: None,
             rt_array_free: None,
@@ -608,6 +624,59 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_mqtt_receive = Some(self.module.add_function(
             "rb_mqtt_receive",
             ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_ble_init = Some(self.module.add_function(
+            "rb_ble_init",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_ble_advertise = Some(self.module.add_function(
+            "rb_ble_advertise",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_ble_scan = Some(self.module.add_function(
+            "rb_ble_scan",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_ble_send = Some(self.module.add_function(
+            "rb_ble_send",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_ble_receive = Some(self.module.add_function(
+            "rb_ble_receive",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_json_get = Some(self.module.add_function(
+            "rb_json_get",
+            ptr_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(ptr_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_json_set = Some(self.module.add_function(
+            "rb_json_set",
+            ptr_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(ptr_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_json_count = Some(self.module.add_function(
+            "rb_json_count",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
             None,
         ));
         self.rt_powf = Some(self.module.add_function(
@@ -2187,6 +2256,117 @@ impl<'ctx> Codegen<'ctx> {
                 let result = self
                     .builder
                     .build_call(self.rt_mqtt_receive.unwrap(), &[], "mqtt_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::BleInit { name, .. } => {
+                let n = self.compile_expr(name, VarType::String)?.into_pointer_value();
+                self.builder
+                    .build_call(self.rt_ble_init.unwrap(), &[n.into()], "")?;
+            }
+            Statement::BleAdvertise { mode, .. } => {
+                let m = self.compile_expr_as_i32(mode)?;
+                self.builder.build_call(
+                    self.rt_ble_advertise.unwrap(),
+                    &[BasicMetadataValueEnum::from(m)],
+                    "",
+                )?;
+            }
+            Statement::BleScan {
+                target, var_type, ..
+            } => {
+                let result = self
+                    .builder
+                    .build_call(self.rt_ble_scan.unwrap(), &[], "ble_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::BleSend { data, .. } => {
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder
+                    .build_call(self.rt_ble_send.unwrap(), &[d.into()], "")?;
+            }
+            Statement::BleReceive {
+                target, var_type, ..
+            } => {
+                let result = self
+                    .builder
+                    .build_call(self.rt_ble_receive.unwrap(), &[], "ble_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::JsonGet {
+                json, key, target, var_type, ..
+            } => {
+                let j = self.compile_expr(json, VarType::String)?.into_pointer_value();
+                let k = self.compile_expr(key, VarType::String)?.into_pointer_value();
+                let result = self
+                    .builder
+                    .build_call(
+                        self.rt_json_get.unwrap(),
+                        &[j.into(), k.into()],
+                        "json_val",
+                    )?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::JsonSet {
+                json, key, value, target, var_type, ..
+            } => {
+                let j = self.compile_expr(json, VarType::String)?.into_pointer_value();
+                let k = self.compile_expr(key, VarType::String)?.into_pointer_value();
+                let v = self.compile_expr(value, VarType::String)?.into_pointer_value();
+                let result = self
+                    .builder
+                    .build_call(
+                        self.rt_json_set.unwrap(),
+                        &[j.into(), k.into(), v.into()],
+                        "json_val",
+                    )?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::JsonCount {
+                json, target, var_type, ..
+            } => {
+                let j = self.compile_expr(json, VarType::String)?.into_pointer_value();
+                let result = self
+                    .builder
+                    .build_call(
+                        self.rt_json_count.unwrap(),
+                        &[j.into()],
+                        "json_cnt",
+                    )?
                     .try_as_basic_value()
                     .left()
                     .unwrap();

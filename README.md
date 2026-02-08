@@ -585,6 +585,14 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `MQTT.PUBLISH topic$, message$` | Publish message to topic |
 | `MQTT.SUBSCRIBE topic$` | Subscribe to topic |
 | `MQTT.RECEIVE var$` | Receive message (blocking) |
+| `BLE.INIT name$` | Initialize BLE with device name |
+| `BLE.ADVERTISE mode` | Start (1) or stop (0) BLE advertising |
+| `BLE.SCAN var$` | Scan for BLE devices |
+| `BLE.SEND data$` | Send data via BLE GATT notify |
+| `BLE.RECEIVE var$` | Receive BLE data (blocking) |
+| `JSON.GET json$, key$, var$` | Extract value by key (dot-notation for nested) |
+| `JSON.SET json$, key$, val$, var$` | Set key in JSON, returns updated JSON |
+| `JSON.COUNT json$, var` | Count elements in JSON array/object |
 
 ## Project Structure
 
@@ -625,7 +633,9 @@ RustyBASIC/
 │   ├── timer.bas
 │   ├── http.bas
 │   ├── nvs.bas
-│   └── mqtt.bas
+│   ├── mqtt.bas
+│   ├── ble.bas
+│   └── json.bas
 └── tests/
 ```
 

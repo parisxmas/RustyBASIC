@@ -178,6 +178,22 @@ pub enum TokenKind {
     MqttSubscribe,
     #[regex(r"(?i:MQTT\.RECEIVE)")]
     MqttReceive,
+    #[regex(r"(?i:BLE\.INIT)")]
+    BleInit,
+    #[regex(r"(?i:BLE\.ADVERTISE)")]
+    BleAdvertise,
+    #[regex(r"(?i:BLE\.SCAN)")]
+    BleScan,
+    #[regex(r"(?i:BLE\.SEND)")]
+    BleSend,
+    #[regex(r"(?i:BLE\.RECEIVE)")]
+    BleReceive,
+    #[regex(r"(?i:JSON\.GET)")]
+    JsonGet,
+    #[regex(r"(?i:JSON\.SET)")]
+    JsonSet,
+    #[regex(r"(?i:JSON\.COUNT)")]
+    JsonCount,
 
     // ── Literals ────────────────────────────────────────────
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
@@ -337,6 +353,14 @@ impl std::fmt::Display for TokenKind {
             TokenKind::MqttPublish => write!(f, "MQTT.PUBLISH"),
             TokenKind::MqttSubscribe => write!(f, "MQTT.SUBSCRIBE"),
             TokenKind::MqttReceive => write!(f, "MQTT.RECEIVE"),
+            TokenKind::BleInit => write!(f, "BLE.INIT"),
+            TokenKind::BleAdvertise => write!(f, "BLE.ADVERTISE"),
+            TokenKind::BleScan => write!(f, "BLE.SCAN"),
+            TokenKind::BleSend => write!(f, "BLE.SEND"),
+            TokenKind::BleReceive => write!(f, "BLE.RECEIVE"),
+            TokenKind::JsonGet => write!(f, "JSON.GET"),
+            TokenKind::JsonSet => write!(f, "JSON.SET"),
+            TokenKind::JsonCount => write!(f, "JSON.COUNT"),
             TokenKind::FloatLiteral(v) => write!(f, "{v}"),
             TokenKind::IntLiteral(v) => write!(f, "{v}"),
             TokenKind::StringLiteral(v) => write!(f, "\"{v}\""),

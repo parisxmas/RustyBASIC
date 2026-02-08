@@ -375,6 +375,14 @@ impl Parser {
             Some(TokenKind::MqttPublish) => self.parse_mqtt_publish(),
             Some(TokenKind::MqttSubscribe) => self.parse_mqtt_subscribe(),
             Some(TokenKind::MqttReceive) => self.parse_mqtt_receive(),
+            Some(TokenKind::BleInit) => self.parse_ble_init(),
+            Some(TokenKind::BleAdvertise) => self.parse_ble_advertise(),
+            Some(TokenKind::BleScan) => self.parse_ble_scan(),
+            Some(TokenKind::BleSend) => self.parse_ble_send(),
+            Some(TokenKind::BleReceive) => self.parse_ble_receive(),
+            Some(TokenKind::JsonGet) => self.parse_json_get(),
+            Some(TokenKind::JsonSet) => self.parse_json_set(),
+            Some(TokenKind::JsonCount) => self.parse_json_count(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -1434,6 +1442,109 @@ impl Parser {
         self.advance();
         let (target, var_type) = self.expect_variable()?;
         Ok(Statement::MqttReceive {
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_ble_init(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let name = self.parse_expr()?;
+        Ok(Statement::BleInit {
+            name,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_ble_advertise(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let mode = self.parse_expr()?;
+        Ok(Statement::BleAdvertise {
+            mode,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_ble_scan(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::BleScan {
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_ble_send(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let data = self.parse_expr()?;
+        Ok(Statement::BleSend {
+            data,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_ble_receive(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::BleReceive {
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_json_get(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let json = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let key = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::JsonGet {
+            json,
+            key,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_json_set(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let json = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let key = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let value = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::JsonSet {
+            json,
+            key,
+            value,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_json_count(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let json = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::JsonCount {
+            json,
             target,
             var_type,
             span: start.merge(self.prev_span()),

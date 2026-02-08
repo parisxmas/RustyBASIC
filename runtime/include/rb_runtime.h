@@ -104,6 +104,20 @@ void rb_mqtt_publish(rb_string_t* topic, rb_string_t* message);
 void rb_mqtt_subscribe(rb_string_t* topic);
 rb_string_t* rb_mqtt_receive(void);
 
+/* ── BLE ──────────────────────────────────────────────── */
+
+void rb_ble_init(rb_string_t* name);
+void rb_ble_advertise(int32_t mode);
+rb_string_t* rb_ble_scan(void);
+void rb_ble_send(rb_string_t* data);
+rb_string_t* rb_ble_receive(void);
+
+/* ── JSON ─────────────────────────────────────────────── */
+
+rb_string_t* rb_json_get(rb_string_t* json, rb_string_t* key);
+rb_string_t* rb_json_set(rb_string_t* json, rb_string_t* key, rb_string_t* value);
+int32_t rb_json_count(rb_string_t* json);
+
 /* ── Arrays ───────────────────────────────────────────── */
 
 void rb_array_check_dim_size(int32_t dim_value, int32_t dim_index);

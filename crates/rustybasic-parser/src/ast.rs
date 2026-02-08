@@ -382,6 +382,49 @@ pub enum Statement {
         var_type: QBType,
         span: Span,
     },
+    BleInit {
+        name: Expr,
+        span: Span,
+    },
+    BleAdvertise {
+        mode: Expr,
+        span: Span,
+    },
+    BleScan {
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    BleSend {
+        data: Expr,
+        span: Span,
+    },
+    BleReceive {
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    JsonGet {
+        json: Expr,
+        key: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    JsonSet {
+        json: Expr,
+        key: Expr,
+        value: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    JsonCount {
+        json: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
 
     /// Array element assignment: arr(i, j) = expr
     ArrayAssign {
