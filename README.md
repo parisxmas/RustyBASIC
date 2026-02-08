@@ -580,6 +580,11 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `HTTP.POST url$, body$, result$` | HTTP POST request |
 | `NVS.WRITE key$, value` | Write integer to flash storage |
 | `NVS.READ key$, var` | Read integer from flash storage |
+| `MQTT.CONNECT broker$, port` | Connect to MQTT broker |
+| `MQTT.DISCONNECT` | Disconnect from MQTT broker |
+| `MQTT.PUBLISH topic$, message$` | Publish message to topic |
+| `MQTT.SUBSCRIBE topic$` | Subscribe to topic |
+| `MQTT.RECEIVE var$` | Receive message (blocking) |
 
 ## Project Structure
 
@@ -619,7 +624,8 @@ RustyBASIC/
 │   ├── uart.bas
 │   ├── timer.bas
 │   ├── http.bas
-│   └── nvs.bas
+│   ├── nvs.bas
+│   └── mqtt.bas
 └── tests/
 ```
 

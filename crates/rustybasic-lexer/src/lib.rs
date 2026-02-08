@@ -168,6 +168,16 @@ pub enum TokenKind {
     NvsWrite,
     #[regex(r"(?i:NVS\.READ)")]
     NvsRead,
+    #[regex(r"(?i:MQTT\.CONNECT)")]
+    MqttConnect,
+    #[regex(r"(?i:MQTT\.DISCONNECT)")]
+    MqttDisconnect,
+    #[regex(r"(?i:MQTT\.PUBLISH)")]
+    MqttPublish,
+    #[regex(r"(?i:MQTT\.SUBSCRIBE)")]
+    MqttSubscribe,
+    #[regex(r"(?i:MQTT\.RECEIVE)")]
+    MqttReceive,
 
     // ── Literals ────────────────────────────────────────────
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
@@ -322,6 +332,11 @@ impl std::fmt::Display for TokenKind {
             TokenKind::HttpPost => write!(f, "HTTP.POST"),
             TokenKind::NvsWrite => write!(f, "NVS.WRITE"),
             TokenKind::NvsRead => write!(f, "NVS.READ"),
+            TokenKind::MqttConnect => write!(f, "MQTT.CONNECT"),
+            TokenKind::MqttDisconnect => write!(f, "MQTT.DISCONNECT"),
+            TokenKind::MqttPublish => write!(f, "MQTT.PUBLISH"),
+            TokenKind::MqttSubscribe => write!(f, "MQTT.SUBSCRIBE"),
+            TokenKind::MqttReceive => write!(f, "MQTT.RECEIVE"),
             TokenKind::FloatLiteral(v) => write!(f, "{v}"),
             TokenKind::IntLiteral(v) => write!(f, "{v}"),
             TokenKind::StringLiteral(v) => write!(f, "\"{v}\""),

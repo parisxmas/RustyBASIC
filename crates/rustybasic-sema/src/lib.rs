@@ -832,6 +832,23 @@ impl SemanticAnalyzer {
                 self.check_expr(key);
                 self.declare_or_check_var(target, var_type, *span);
             }
+            Statement::MqttConnect { broker, port, .. } => {
+                self.check_expr(broker);
+                self.check_expr(port);
+            }
+            Statement::MqttDisconnect { .. } => {}
+            Statement::MqttPublish { topic, message, .. } => {
+                self.check_expr(topic);
+                self.check_expr(message);
+            }
+            Statement::MqttSubscribe { topic, .. } => {
+                self.check_expr(topic);
+            }
+            Statement::MqttReceive {
+                target, var_type, span,
+            } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
             Statement::ArrayAssign {
                 name,
                 var_type: _,

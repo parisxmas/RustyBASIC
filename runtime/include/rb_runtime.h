@@ -96,6 +96,14 @@ rb_string_t* rb_http_post(rb_string_t* url, rb_string_t* body);
 void rb_nvs_write(rb_string_t* key, int32_t value);
 int32_t rb_nvs_read(rb_string_t* key);
 
+/* ── MQTT ─────────────────────────────────────────────── */
+
+void rb_mqtt_connect(rb_string_t* broker, int32_t port);
+void rb_mqtt_disconnect(void);
+void rb_mqtt_publish(rb_string_t* topic, rb_string_t* message);
+void rb_mqtt_subscribe(rb_string_t* topic);
+rb_string_t* rb_mqtt_receive(void);
+
 /* ── Arrays ───────────────────────────────────────────── */
 
 void rb_array_check_dim_size(int32_t dim_value, int32_t dim_index);

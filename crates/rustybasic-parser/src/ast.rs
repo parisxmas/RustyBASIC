@@ -360,6 +360,28 @@ pub enum Statement {
         var_type: QBType,
         span: Span,
     },
+    MqttConnect {
+        broker: Expr,
+        port: Expr,
+        span: Span,
+    },
+    MqttDisconnect {
+        span: Span,
+    },
+    MqttPublish {
+        topic: Expr,
+        message: Expr,
+        span: Span,
+    },
+    MqttSubscribe {
+        topic: Expr,
+        span: Span,
+    },
+    MqttReceive {
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
 
     /// Array element assignment: arr(i, j) = expr
     ArrayAssign {

@@ -116,6 +116,11 @@ pub struct Codegen<'ctx> {
     rt_http_post: Option<FunctionValue<'ctx>>,
     rt_nvs_write: Option<FunctionValue<'ctx>>,
     rt_nvs_read: Option<FunctionValue<'ctx>>,
+    rt_mqtt_connect: Option<FunctionValue<'ctx>>,
+    rt_mqtt_disconnect: Option<FunctionValue<'ctx>>,
+    rt_mqtt_publish: Option<FunctionValue<'ctx>>,
+    rt_mqtt_subscribe: Option<FunctionValue<'ctx>>,
+    rt_mqtt_receive: Option<FunctionValue<'ctx>>,
     rt_powf: Option<FunctionValue<'ctx>>,
     rt_array_alloc: Option<FunctionValue<'ctx>>,
     rt_array_free: Option<FunctionValue<'ctx>>,
@@ -233,6 +238,11 @@ impl<'ctx> Codegen<'ctx> {
             rt_http_post: None,
             rt_nvs_write: None,
             rt_nvs_read: None,
+            rt_mqtt_connect: None,
+            rt_mqtt_disconnect: None,
+            rt_mqtt_publish: None,
+            rt_mqtt_subscribe: None,
+            rt_mqtt_receive: None,
             rt_powf: None,
             rt_array_alloc: None,
             rt_array_free: None,
@@ -561,6 +571,43 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_nvs_read = Some(self.module.add_function(
             "rb_nvs_read",
             i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_mqtt_connect = Some(self.module.add_function(
+            "rb_mqtt_connect",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_mqtt_disconnect = Some(self.module.add_function(
+            "rb_mqtt_disconnect",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_mqtt_publish = Some(self.module.add_function(
+            "rb_mqtt_publish",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(ptr_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_mqtt_subscribe = Some(self.module.add_function(
+            "rb_mqtt_subscribe",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_mqtt_receive = Some(self.module.add_function(
+            "rb_mqtt_receive",
+            ptr_t.fn_type(&[], false),
             None,
         ));
         self.rt_powf = Some(self.module.add_function(
@@ -2098,6 +2145,48 @@ impl<'ctx> Codegen<'ctx> {
                 let result = self
                     .builder
                     .build_call(self.rt_nvs_read.unwrap(), &[k.into()], "nvs_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::MqttConnect { broker, port, .. } => {
+                let b = self.compile_expr(broker, VarType::String)?.into_pointer_value();
+                let p = self.compile_expr_as_i32(port)?;
+                self.builder.build_call(
+                    self.rt_mqtt_connect.unwrap(),
+                    &[b.into(), p.into()],
+                    "",
+                )?;
+            }
+            Statement::MqttDisconnect { .. } => {
+                self.builder
+                    .build_call(self.rt_mqtt_disconnect.unwrap(), &[], "")?;
+            }
+            Statement::MqttPublish { topic, message, .. } => {
+                let t = self.compile_expr(topic, VarType::String)?.into_pointer_value();
+                let m = self.compile_expr(message, VarType::String)?.into_pointer_value();
+                self.builder.build_call(
+                    self.rt_mqtt_publish.unwrap(),
+                    &[t.into(), m.into()],
+                    "",
+                )?;
+            }
+            Statement::MqttSubscribe { topic, .. } => {
+                let t = self.compile_expr(topic, VarType::String)?.into_pointer_value();
+                self.builder
+                    .build_call(self.rt_mqtt_subscribe.unwrap(), &[t.into()], "")?;
+            }
+            Statement::MqttReceive {
+                target, var_type, ..
+            } => {
+                let result = self
+                    .builder
+                    .build_call(self.rt_mqtt_receive.unwrap(), &[], "mqtt_val")?
                     .try_as_basic_value()
                     .left()
                     .unwrap();

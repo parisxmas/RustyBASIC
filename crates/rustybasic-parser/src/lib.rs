@@ -370,6 +370,11 @@ impl Parser {
             Some(TokenKind::HttpPost) => self.parse_http_post(),
             Some(TokenKind::NvsWrite) => self.parse_nvs_write(),
             Some(TokenKind::NvsRead) => self.parse_nvs_read(),
+            Some(TokenKind::MqttConnect) => self.parse_mqtt_connect(),
+            Some(TokenKind::MqttDisconnect) => self.parse_mqtt_disconnect(),
+            Some(TokenKind::MqttPublish) => self.parse_mqtt_publish(),
+            Some(TokenKind::MqttSubscribe) => self.parse_mqtt_subscribe(),
+            Some(TokenKind::MqttReceive) => self.parse_mqtt_receive(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -1376,6 +1381,59 @@ impl Parser {
         let (target, var_type) = self.expect_variable()?;
         Ok(Statement::NvsRead {
             key,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_mqtt_connect(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let broker = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let port = self.parse_expr()?;
+        Ok(Statement::MqttConnect {
+            broker,
+            port,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_mqtt_disconnect(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::MqttDisconnect { span })
+    }
+
+    fn parse_mqtt_publish(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let topic = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let message = self.parse_expr()?;
+        Ok(Statement::MqttPublish {
+            topic,
+            message,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_mqtt_subscribe(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let topic = self.parse_expr()?;
+        Ok(Statement::MqttSubscribe {
+            topic,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_mqtt_receive(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::MqttReceive {
             target,
             var_type,
             span: start.merge(self.prev_span()),
