@@ -211,6 +211,14 @@ pub enum TokenKind {
     #[regex(r"(?i:ESPNOW\.RECEIVE)")]
     EspnowReceive,
 
+    // ── DATA/READ/RESTORE ─────────────────────────────────
+    #[regex(r"(?i:DATA)")]
+    Data,
+    #[regex(r"(?i:READ)")]
+    Read,
+    #[regex(r"(?i:RESTORE)")]
+    Restore,
+
     // ── Literals ────────────────────────────────────────────
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
     #[regex(r"\.[0-9]+([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
@@ -385,6 +393,9 @@ impl std::fmt::Display for TokenKind {
             TokenKind::EspnowInit => write!(f, "ESPNOW.INIT"),
             TokenKind::EspnowSend => write!(f, "ESPNOW.SEND"),
             TokenKind::EspnowReceive => write!(f, "ESPNOW.RECEIVE"),
+            TokenKind::Data => write!(f, "DATA"),
+            TokenKind::Read => write!(f, "READ"),
+            TokenKind::Restore => write!(f, "RESTORE"),
             TokenKind::FloatLiteral(v) => write!(f, "{v}"),
             TokenKind::IntLiteral(v) => write!(f, "{v}"),
             TokenKind::StringLiteral(v) => write!(f, "\"{v}\""),

@@ -391,6 +391,9 @@ impl Parser {
             Some(TokenKind::EspnowInit) => self.parse_espnow_init(),
             Some(TokenKind::EspnowSend) => self.parse_espnow_send(),
             Some(TokenKind::EspnowReceive) => self.parse_espnow_receive(),
+            Some(TokenKind::Data) => self.parse_data(),
+            Some(TokenKind::Read) => self.parse_read(),
+            Some(TokenKind::Restore) => self.parse_restore(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -1641,6 +1644,64 @@ impl Parser {
             var_type,
             span: start.merge(self.prev_span()),
         })
+    }
+
+    // ── DATA/READ/RESTORE ────────────────────────────────────
+
+    fn parse_data(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // DATA
+        let mut items = Vec::new();
+        items.push(self.parse_data_item()?);
+        while self.eat(TokenKind::Comma) {
+            items.push(self.parse_data_item()?);
+        }
+        Ok(Statement::Data {
+            items,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_data_item(&mut self) -> ParseResult<DataItem> {
+        // Optional minus prefix for negative numeric literals
+        let negative = self.eat(TokenKind::Minus);
+        match self.peek_kind().cloned() {
+            Some(TokenKind::IntLiteral(v)) => {
+                self.advance();
+                Ok(DataItem::Int(if negative { -v } else { v }))
+            }
+            Some(TokenKind::FloatLiteral(v)) => {
+                self.advance();
+                Ok(DataItem::Float(if negative { -v } else { v }))
+            }
+            Some(TokenKind::StringLiteral(s)) if !negative => {
+                self.advance();
+                Ok(DataItem::Str(s))
+            }
+            _ => Err(self.error("expected integer, float, or string literal in DATA")),
+        }
+    }
+
+    fn parse_read(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // READ
+        let mut variables = Vec::new();
+        let (name, var_type) = self.expect_variable()?;
+        variables.push((name, var_type));
+        while self.eat(TokenKind::Comma) {
+            let (name, var_type) = self.expect_variable()?;
+            variables.push((name, var_type));
+        }
+        Ok(Statement::Read {
+            variables,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_restore(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance(); // RESTORE
+        Ok(Statement::Restore { span })
     }
 
     // ── Block parsing ───────────────────────────────────────

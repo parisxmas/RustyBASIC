@@ -601,6 +601,9 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `ESPNOW.INIT` | Initialize ESP-NOW peer-to-peer networking |
 | `ESPNOW.SEND peer$, data$` | Send data to peer MAC address |
 | `ESPNOW.RECEIVE var$` | Receive ESP-NOW message (blocking) |
+| `DATA v1, v2, ...` | Declare inline data (mixed int/float/string) |
+| `READ var1, var2, ...` | Read next item(s) from data pool |
+| `RESTORE` | Reset data read pointer to beginning |
 
 ## Project Structure
 
@@ -646,7 +649,8 @@ RustyBASIC/
 │   ├── json.bas
 │   ├── neopixel.bas
 │   ├── deepsleep.bas
-│   └── espnow.bas
+│   ├── espnow.bas
+│   └── data_read.bas
 └── tests/
 ```
 

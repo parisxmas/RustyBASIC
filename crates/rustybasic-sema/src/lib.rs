@@ -53,6 +53,7 @@ pub struct SemaResult {
     pub functions: HashMap<String, FunctionInfo>,
     pub types: HashMap<String, TypeInfo>,
     pub constants: HashSet<String>,
+    pub data_items: Vec<DataItem>,
     pub errors: Vec<SemaError>,
 }
 
@@ -96,6 +97,7 @@ pub struct SemanticAnalyzer {
     functions: HashMap<String, FunctionInfo>,
     types: HashMap<String, TypeInfo>,
     constants: HashSet<String>,
+    data_items: Vec<DataItem>,
     scope_stack: Vec<ScopeKind>,
     errors: Vec<SemaError>,
 }
@@ -112,6 +114,7 @@ impl SemanticAnalyzer {
             functions: HashMap::new(),
             types: HashMap::new(),
             constants: HashSet::new(),
+            data_items: Vec::new(),
             scope_stack: vec![ScopeKind::TopLevel],
             errors: Vec::new(),
         }
@@ -177,6 +180,7 @@ impl SemanticAnalyzer {
             functions: self.functions,
             types: self.types,
             constants: self.constants,
+            data_items: self.data_items,
             errors: self.errors,
         }
     }
@@ -914,6 +918,15 @@ impl SemanticAnalyzer {
             } => {
                 self.declare_or_check_var(target, var_type, *span);
             }
+            Statement::Data { items, .. } => {
+                self.data_items.extend(items.iter().cloned());
+            }
+            Statement::Read { variables, span, .. } => {
+                for (name, var_type) in variables {
+                    self.declare_or_check_var(name, var_type, *span);
+                }
+            }
+            Statement::Restore { .. } => {}
             Statement::ArrayAssign {
                 name,
                 var_type: _,

@@ -142,6 +142,10 @@ pub struct Codegen<'ctx> {
     rt_array_free: Option<FunctionValue<'ctx>>,
     rt_array_bounds_check: Option<FunctionValue<'ctx>>,
     rt_array_check_dim_size: Option<FunctionValue<'ctx>>,
+    rt_data_read_int: Option<FunctionValue<'ctx>>,
+    rt_data_read_float: Option<FunctionValue<'ctx>>,
+    rt_data_read_string: Option<FunctionValue<'ctx>>,
+    rt_data_restore: Option<FunctionValue<'ctx>>,
 
     // String built-in function declarations
     rt_fn_len: Option<FunctionValue<'ctx>>,
@@ -280,6 +284,10 @@ impl<'ctx> Codegen<'ctx> {
             rt_array_free: None,
             rt_array_bounds_check: None,
             rt_array_check_dim_size: None,
+            rt_data_read_int: None,
+            rt_data_read_float: None,
+            rt_data_read_string: None,
+            rt_data_restore: None,
             rt_fn_len: None,
             rt_fn_asc: None,
             rt_fn_chr_s: None,
@@ -912,6 +920,28 @@ impl<'ctx> Codegen<'ctx> {
             f32_t.fn_type(&[], false),
             None,
         ));
+
+        // ── DATA/READ/RESTORE runtime functions ──
+        self.rt_data_read_int = Some(self.module.add_function(
+            "rb_data_read_int",
+            i32_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_data_read_float = Some(self.module.add_function(
+            "rb_data_read_float",
+            f32_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_data_read_string = Some(self.module.add_function(
+            "rb_data_read_string",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_data_restore = Some(self.module.add_function(
+            "rb_data_restore",
+            void_t.fn_type(&[], false),
+            None,
+        ));
     }
 
     fn qb_to_var(qb: &QBType) -> VarType {
@@ -926,11 +956,113 @@ impl<'ctx> Codegen<'ctx> {
         }
     }
 
+    // ── DATA globals emission ─────────────────────────────
+
+    fn emit_data_globals(&self) -> Result<()> {
+        use rustybasic_parser::ast::DataItem;
+
+        let items = &self.sema.data_items;
+        let n = items.len();
+
+        // Build parallel arrays of type tags, ints, floats, and string pointers
+        let mut type_vals = Vec::with_capacity(n);
+        let mut int_vals = Vec::with_capacity(n);
+        let mut float_vals = Vec::with_capacity(n);
+        let mut string_vals = Vec::with_capacity(n);
+
+        for (i, item) in items.iter().enumerate() {
+            match item {
+                DataItem::Int(v) => {
+                    type_vals.push(self.i32_type.const_int(0, false));
+                    int_vals.push(self.i32_type.const_int(*v as u64, true));
+                    float_vals.push(self.f32_type.const_float(0.0));
+                    string_vals.push(self.ptr_type.const_null());
+                }
+                DataItem::Float(v) => {
+                    type_vals.push(self.i32_type.const_int(1, false));
+                    int_vals.push(self.i32_type.const_zero());
+                    float_vals.push(self.f32_type.const_float(*v as f64));
+                    string_vals.push(self.ptr_type.const_null());
+                }
+                DataItem::Str(s) => {
+                    type_vals.push(self.i32_type.const_int(2, false));
+                    int_vals.push(self.i32_type.const_zero());
+                    float_vals.push(self.f32_type.const_float(0.0));
+                    let gstr = self.module.add_global(
+                        self.context.i8_type().array_type(s.len() as u32 + 1),
+                        None,
+                        &format!("rb_data_str_{i}"),
+                    );
+                    gstr.set_initializer(
+                        &self.context.const_string(s.as_bytes(), true),
+                    );
+                    gstr.set_constant(true);
+                    gstr.set_unnamed_addr(true);
+                    string_vals.push(gstr.as_pointer_value());
+                }
+            }
+        }
+
+        // rb_data_types
+        let types_arr = self.i32_type.const_array(&type_vals);
+        let g_types = self.module.add_global(
+            self.i32_type.array_type(n as u32),
+            None,
+            "rb_data_types",
+        );
+        g_types.set_initializer(&types_arr);
+        g_types.set_constant(true);
+
+        // rb_data_ints
+        let ints_arr = self.i32_type.const_array(&int_vals);
+        let g_ints = self.module.add_global(
+            self.i32_type.array_type(n as u32),
+            None,
+            "rb_data_ints",
+        );
+        g_ints.set_initializer(&ints_arr);
+        g_ints.set_constant(true);
+
+        // rb_data_floats
+        let floats_arr = self.f32_type.const_array(&float_vals);
+        let g_floats = self.module.add_global(
+            self.f32_type.array_type(n as u32),
+            None,
+            "rb_data_floats",
+        );
+        g_floats.set_initializer(&floats_arr);
+        g_floats.set_constant(true);
+
+        // rb_data_strings
+        let strings_arr = self.ptr_type.const_array(&string_vals);
+        let g_strings = self.module.add_global(
+            self.ptr_type.array_type(n as u32),
+            None,
+            "rb_data_strings",
+        );
+        g_strings.set_initializer(&strings_arr);
+        g_strings.set_constant(true);
+
+        // rb_data_count
+        let g_count = self.module.add_global(
+            self.i32_type,
+            None,
+            "rb_data_count",
+        );
+        g_count.set_initializer(&self.i32_type.const_int(n as u64, false));
+        g_count.set_constant(true);
+
+        Ok(())
+    }
+
     // ── Compilation entry point ─────────────────────────────
 
     pub fn compile(&mut self, program: &Program) -> Result<()> {
         let triple = TargetTriple::create(&self.target_config.triple);
         self.module.set_triple(&triple);
+
+        // Emit DATA pool globals
+        self.emit_data_globals()?;
 
         // Declare LLVM functions for user SUBs and FUNCTIONs
         for sub_def in &program.subs {
@@ -2515,6 +2647,45 @@ impl<'ctx> Codegen<'ctx> {
                 if let Some((alloca, _)) = self.variables.get(target) {
                     self.builder.build_store(*alloca, result)?;
                 }
+            }
+            Statement::Data { .. } => {
+                // No-op: data items are collected during sema and emitted as globals
+            }
+            Statement::Read { variables, .. } => {
+                for (name, var_type) in variables {
+                    let vt = Self::qb_to_var(var_type);
+                    self.ensure_var(name, vt)?;
+                    let val = match vt {
+                        VarType::Integer => {
+                            self.builder
+                                .build_call(self.rt_data_read_int.unwrap(), &[], "data_int")?
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                        }
+                        VarType::Float => {
+                            self.builder
+                                .build_call(self.rt_data_read_float.unwrap(), &[], "data_float")?
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                        }
+                        VarType::String => {
+                            self.builder
+                                .build_call(self.rt_data_read_string.unwrap(), &[], "data_str")?
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                        }
+                    };
+                    if let Some((alloca, _)) = self.variables.get(name) {
+                        self.builder.build_store(*alloca, val)?;
+                    }
+                }
+            }
+            Statement::Restore { .. } => {
+                self.builder
+                    .build_call(self.rt_data_restore.unwrap(), &[], "")?;
             }
         }
         Ok(())

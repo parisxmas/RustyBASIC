@@ -135,6 +135,13 @@ void rb_espnow_init(void);
 void rb_espnow_send(rb_string_t* peer, rb_string_t* data);
 rb_string_t* rb_espnow_receive(void);
 
+/* ── DATA/READ/RESTORE ───────────────────────────────── */
+
+int32_t rb_data_read_int(void);
+float rb_data_read_float(void);
+rb_string_t* rb_data_read_string(void);
+void rb_data_restore(void);
+
 /* ── Arrays ───────────────────────────────────────────── */
 
 void rb_array_check_dim_size(int32_t dim_value, int32_t dim_index);

@@ -95,6 +95,15 @@ impl From<&QBType> for VarType {
     }
 }
 
+// ── DATA item (for DATA/READ/RESTORE) ───────────────────
+
+#[derive(Debug, Clone)]
+pub enum DataItem {
+    Int(i32),
+    Float(f32),
+    Str(String),
+}
+
 // ── Statements ──────────────────────────────────────────
 
 #[derive(Debug, Clone)]
@@ -458,6 +467,21 @@ pub enum Statement {
     EspnowReceive {
         target: String,
         var_type: QBType,
+        span: Span,
+    },
+
+    /// DATA v1, v2, ... — inline data declaration
+    Data {
+        items: Vec<DataItem>,
+        span: Span,
+    },
+    /// READ var1, var2, ... — read next items from data pool
+    Read {
+        variables: Vec<(String, QBType)>,
+        span: Span,
+    },
+    /// RESTORE — reset data read pointer
+    Restore {
         span: Span,
     },
 
