@@ -767,6 +767,71 @@ impl SemanticAnalyzer {
             Statement::Delay { ms, .. } => {
                 self.check_expr(ms);
             }
+            Statement::AdcRead {
+                pin, target, var_type, span,
+            } => {
+                self.check_expr(pin);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::PwmSetup {
+                channel, pin, freq, resolution, ..
+            } => {
+                self.check_expr(channel);
+                self.check_expr(pin);
+                self.check_expr(freq);
+                self.check_expr(resolution);
+            }
+            Statement::PwmDuty { channel, duty, .. } => {
+                self.check_expr(channel);
+                self.check_expr(duty);
+            }
+            Statement::UartSetup {
+                port, baud, tx, rx, ..
+            } => {
+                self.check_expr(port);
+                self.check_expr(baud);
+                self.check_expr(tx);
+                self.check_expr(rx);
+            }
+            Statement::UartWrite { port, data, .. } => {
+                self.check_expr(port);
+                self.check_expr(data);
+            }
+            Statement::UartRead {
+                port, target, var_type, span,
+            } => {
+                self.check_expr(port);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::TimerStart { .. } => {}
+            Statement::TimerElapsed {
+                target, var_type, span,
+            } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::HttpGet {
+                url, target, var_type, span,
+            } => {
+                self.check_expr(url);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::HttpPost {
+                url, body, target, var_type, span,
+            } => {
+                self.check_expr(url);
+                self.check_expr(body);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::NvsWrite { key, value, .. } => {
+                self.check_expr(key);
+                self.check_expr(value);
+            }
+            Statement::NvsRead {
+                key, target, var_type, span,
+            } => {
+                self.check_expr(key);
+                self.declare_or_check_var(target, var_type, *span);
+            }
             Statement::ArrayAssign {
                 name,
                 var_type: _,

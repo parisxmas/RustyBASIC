@@ -348,6 +348,43 @@ END IF
 END
 ```
 
+### PWM LED Fade
+
+```basic
+CONST LED_PIN = 2
+CONST PWM_CH = 0
+
+PWM.SETUP PWM_CH, LED_PIN, 5000, 8
+
+DIM duty AS INTEGER
+
+DO
+    FOR duty = 0 TO 255
+        PWM.DUTY PWM_CH, duty
+        DELAY 5
+    NEXT duty
+
+    FOR duty = 255 TO 0 STEP -1
+        PWM.DUTY PWM_CH, duty
+        DELAY 5
+    NEXT duty
+LOOP
+```
+
+### HTTP GET Request
+
+```basic
+DIM response$ AS STRING
+
+WIFI.CONNECT "MyNetwork", "MyPassword"
+DELAY 3000
+
+HTTP.GET "http://httpbin.org/get", response$
+PRINT response$
+
+END
+```
+
 ### INCLUDE Directive
 
 Split code across multiple files with `INCLUDE`:
@@ -531,6 +568,18 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `WIFI.STATUS var` | Check WiFi status |
 | `WIFI.DISCONNECT` | Disconnect WiFi |
 | `DELAY ms` | Pause execution (milliseconds) |
+| `ADC.READ pin, var` | Read analog input |
+| `PWM.SETUP ch, pin, freq, res` | Configure PWM channel |
+| `PWM.DUTY ch, duty` | Set PWM duty cycle |
+| `UART.SETUP port, baud, tx, rx` | Initialize UART |
+| `UART.WRITE port, data` | Write byte to UART |
+| `UART.READ port, var` | Read byte from UART |
+| `TIMER.START` | Start stopwatch timer |
+| `TIMER.ELAPSED var` | Get elapsed time (ms) |
+| `HTTP.GET url$, result$` | HTTP GET request |
+| `HTTP.POST url$, body$, result$` | HTTP POST request |
+| `NVS.WRITE key$, value` | Write integer to flash storage |
+| `NVS.READ key$, var` | Read integer from flash storage |
 
 ## Project Structure
 
@@ -564,7 +613,13 @@ RustyBASIC/
 │   ├── include_main.bas
 │   ├── include_lib.bas
 │   ├── string_funcs.bas
-│   └── math_funcs.bas
+│   ├── math_funcs.bas
+│   ├── adc.bas
+│   ├── pwm.bas
+│   ├── uart.bas
+│   ├── timer.bas
+│   ├── http.bas
+│   └── nvs.bas
 └── tests/
 ```
 

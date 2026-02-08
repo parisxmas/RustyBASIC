@@ -104,6 +104,18 @@ pub struct Codegen<'ctx> {
     rt_wifi_connect: Option<FunctionValue<'ctx>>,
     rt_wifi_status: Option<FunctionValue<'ctx>>,
     rt_wifi_disconnect: Option<FunctionValue<'ctx>>,
+    rt_adc_read: Option<FunctionValue<'ctx>>,
+    rt_pwm_setup: Option<FunctionValue<'ctx>>,
+    rt_pwm_duty: Option<FunctionValue<'ctx>>,
+    rt_uart_setup: Option<FunctionValue<'ctx>>,
+    rt_uart_write: Option<FunctionValue<'ctx>>,
+    rt_uart_read: Option<FunctionValue<'ctx>>,
+    rt_timer_start: Option<FunctionValue<'ctx>>,
+    rt_timer_elapsed: Option<FunctionValue<'ctx>>,
+    rt_http_get: Option<FunctionValue<'ctx>>,
+    rt_http_post: Option<FunctionValue<'ctx>>,
+    rt_nvs_write: Option<FunctionValue<'ctx>>,
+    rt_nvs_read: Option<FunctionValue<'ctx>>,
     rt_powf: Option<FunctionValue<'ctx>>,
     rt_array_alloc: Option<FunctionValue<'ctx>>,
     rt_array_free: Option<FunctionValue<'ctx>>,
@@ -209,6 +221,18 @@ impl<'ctx> Codegen<'ctx> {
             rt_wifi_connect: None,
             rt_wifi_status: None,
             rt_wifi_disconnect: None,
+            rt_adc_read: None,
+            rt_pwm_setup: None,
+            rt_pwm_duty: None,
+            rt_uart_setup: None,
+            rt_uart_write: None,
+            rt_uart_read: None,
+            rt_timer_start: None,
+            rt_timer_elapsed: None,
+            rt_http_get: None,
+            rt_http_post: None,
+            rt_nvs_write: None,
+            rt_nvs_read: None,
             rt_powf: None,
             rt_array_alloc: None,
             rt_array_free: None,
@@ -437,6 +461,106 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_wifi_disconnect = Some(self.module.add_function(
             "rb_wifi_disconnect",
             void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_adc_read = Some(self.module.add_function(
+            "rb_adc_read",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_pwm_setup = Some(self.module.add_function(
+            "rb_pwm_setup",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_pwm_duty = Some(self.module.add_function(
+            "rb_pwm_duty",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_uart_setup = Some(self.module.add_function(
+            "rb_uart_setup",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_uart_write = Some(self.module.add_function(
+            "rb_uart_write",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_uart_read = Some(self.module.add_function(
+            "rb_uart_read",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_timer_start = Some(self.module.add_function(
+            "rb_timer_start",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_timer_elapsed = Some(self.module.add_function(
+            "rb_timer_elapsed",
+            i32_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_http_get = Some(self.module.add_function(
+            "rb_http_get",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_http_post = Some(self.module.add_function(
+            "rb_http_post",
+            ptr_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(ptr_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_nvs_write = Some(self.module.add_function(
+            "rb_nvs_write",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_nvs_read = Some(self.module.add_function(
+            "rb_nvs_read",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
             None,
         ));
         self.rt_powf = Some(self.module.add_function(
@@ -1830,6 +1954,158 @@ impl<'ctx> Codegen<'ctx> {
             Statement::WifiDisconnect { .. } => {
                 self.builder
                     .build_call(self.rt_wifi_disconnect.unwrap(), &[], "")?;
+            }
+            Statement::AdcRead {
+                pin, target, var_type, ..
+            } => {
+                let pin_val = self.compile_expr_as_i32(pin)?;
+                let result = self
+                    .builder
+                    .build_call(
+                        self.rt_adc_read.unwrap(),
+                        &[BasicMetadataValueEnum::from(pin_val)],
+                        "adc_val",
+                    )?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::PwmSetup {
+                channel, pin, freq, resolution, ..
+            } => {
+                let ch = self.compile_expr_as_i32(channel)?;
+                let p = self.compile_expr_as_i32(pin)?;
+                let f = self.compile_expr_as_i32(freq)?;
+                let r = self.compile_expr_as_i32(resolution)?;
+                self.builder.build_call(
+                    self.rt_pwm_setup.unwrap(),
+                    &[ch.into(), p.into(), f.into(), r.into()],
+                    "",
+                )?;
+            }
+            Statement::PwmDuty { channel, duty, .. } => {
+                let ch = self.compile_expr_as_i32(channel)?;
+                let d = self.compile_expr_as_i32(duty)?;
+                self.builder
+                    .build_call(self.rt_pwm_duty.unwrap(), &[ch.into(), d.into()], "")?;
+            }
+            Statement::UartSetup {
+                port, baud, tx, rx, ..
+            } => {
+                let p = self.compile_expr_as_i32(port)?;
+                let b = self.compile_expr_as_i32(baud)?;
+                let t = self.compile_expr_as_i32(tx)?;
+                let r = self.compile_expr_as_i32(rx)?;
+                self.builder.build_call(
+                    self.rt_uart_setup.unwrap(),
+                    &[p.into(), b.into(), t.into(), r.into()],
+                    "",
+                )?;
+            }
+            Statement::UartWrite { port, data, .. } => {
+                let p = self.compile_expr_as_i32(port)?;
+                let d = self.compile_expr_as_i32(data)?;
+                self.builder
+                    .build_call(self.rt_uart_write.unwrap(), &[p.into(), d.into()], "")?;
+            }
+            Statement::UartRead {
+                port, target, var_type, ..
+            } => {
+                let p = self.compile_expr_as_i32(port)?;
+                let result = self
+                    .builder
+                    .build_call(self.rt_uart_read.unwrap(), &[p.into()], "uart_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::TimerStart { .. } => {
+                self.builder
+                    .build_call(self.rt_timer_start.unwrap(), &[], "")?;
+            }
+            Statement::TimerElapsed {
+                target, var_type, ..
+            } => {
+                let result = self
+                    .builder
+                    .build_call(self.rt_timer_elapsed.unwrap(), &[], "timer_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::HttpGet {
+                url, target, var_type, ..
+            } => {
+                let u = self.compile_expr(url, VarType::String)?.into_pointer_value();
+                let result = self
+                    .builder
+                    .build_call(self.rt_http_get.unwrap(), &[u.into()], "http_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::HttpPost {
+                url, body, target, var_type, ..
+            } => {
+                let u = self.compile_expr(url, VarType::String)?.into_pointer_value();
+                let b = self.compile_expr(body, VarType::String)?.into_pointer_value();
+                let result = self
+                    .builder
+                    .build_call(
+                        self.rt_http_post.unwrap(),
+                        &[u.into(), b.into()],
+                        "http_val",
+                    )?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::NvsWrite { key, value, .. } => {
+                let k = self.compile_expr(key, VarType::String)?.into_pointer_value();
+                let v = self.compile_expr_as_i32(value)?;
+                self.builder
+                    .build_call(self.rt_nvs_write.unwrap(), &[k.into(), v.into()], "")?;
+            }
+            Statement::NvsRead {
+                key, target, var_type, ..
+            } => {
+                let k = self.compile_expr(key, VarType::String)?.into_pointer_value();
+                let result = self
+                    .builder
+                    .build_call(self.rt_nvs_read.unwrap(), &[k.into()], "nvs_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
             }
         }
         Ok(())

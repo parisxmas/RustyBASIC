@@ -292,6 +292,74 @@ pub enum Statement {
         ms: Expr,
         span: Span,
     },
+    AdcRead {
+        pin: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    PwmSetup {
+        channel: Expr,
+        pin: Expr,
+        freq: Expr,
+        resolution: Expr,
+        span: Span,
+    },
+    PwmDuty {
+        channel: Expr,
+        duty: Expr,
+        span: Span,
+    },
+    UartSetup {
+        port: Expr,
+        baud: Expr,
+        tx: Expr,
+        rx: Expr,
+        span: Span,
+    },
+    UartWrite {
+        port: Expr,
+        data: Expr,
+        span: Span,
+    },
+    UartRead {
+        port: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    TimerStart {
+        span: Span,
+    },
+    TimerElapsed {
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    HttpGet {
+        url: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    HttpPost {
+        url: Expr,
+        body: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    NvsWrite {
+        key: Expr,
+        value: Expr,
+        span: Span,
+    },
+    NvsRead {
+        key: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
 
     /// Array element assignment: arr(i, j) = expr
     ArrayAssign {

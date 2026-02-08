@@ -144,6 +144,30 @@ pub enum TokenKind {
     WifiDisconnect,
     #[regex(r"(?i:DELAY)")]
     Delay,
+    #[regex(r"(?i:ADC\.READ)")]
+    AdcRead,
+    #[regex(r"(?i:PWM\.SETUP)")]
+    PwmSetup,
+    #[regex(r"(?i:PWM\.DUTY)")]
+    PwmDuty,
+    #[regex(r"(?i:UART\.SETUP)")]
+    UartSetup,
+    #[regex(r"(?i:UART\.WRITE)")]
+    UartWrite,
+    #[regex(r"(?i:UART\.READ)")]
+    UartRead,
+    #[regex(r"(?i:TIMER\.START)")]
+    TimerStart,
+    #[regex(r"(?i:TIMER\.ELAPSED)")]
+    TimerElapsed,
+    #[regex(r"(?i:HTTP\.GET)")]
+    HttpGet,
+    #[regex(r"(?i:HTTP\.POST)")]
+    HttpPost,
+    #[regex(r"(?i:NVS\.WRITE)")]
+    NvsWrite,
+    #[regex(r"(?i:NVS\.READ)")]
+    NvsRead,
 
     // ── Literals ────────────────────────────────────────────
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
@@ -286,6 +310,18 @@ impl std::fmt::Display for TokenKind {
             TokenKind::WifiStatus => write!(f, "WIFI.STATUS"),
             TokenKind::WifiDisconnect => write!(f, "WIFI.DISCONNECT"),
             TokenKind::Delay => write!(f, "DELAY"),
+            TokenKind::AdcRead => write!(f, "ADC.READ"),
+            TokenKind::PwmSetup => write!(f, "PWM.SETUP"),
+            TokenKind::PwmDuty => write!(f, "PWM.DUTY"),
+            TokenKind::UartSetup => write!(f, "UART.SETUP"),
+            TokenKind::UartWrite => write!(f, "UART.WRITE"),
+            TokenKind::UartRead => write!(f, "UART.READ"),
+            TokenKind::TimerStart => write!(f, "TIMER.START"),
+            TokenKind::TimerElapsed => write!(f, "TIMER.ELAPSED"),
+            TokenKind::HttpGet => write!(f, "HTTP.GET"),
+            TokenKind::HttpPost => write!(f, "HTTP.POST"),
+            TokenKind::NvsWrite => write!(f, "NVS.WRITE"),
+            TokenKind::NvsRead => write!(f, "NVS.READ"),
             TokenKind::FloatLiteral(v) => write!(f, "{v}"),
             TokenKind::IntLiteral(v) => write!(f, "{v}"),
             TokenKind::StringLiteral(v) => write!(f, "\"{v}\""),

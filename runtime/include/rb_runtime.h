@@ -66,6 +66,36 @@ void rb_wifi_connect(rb_string_t* ssid, rb_string_t* password);
 int32_t rb_wifi_status(void);
 void rb_wifi_disconnect(void);
 
+/* ── ADC ──────────────────────────────────────────────── */
+
+int32_t rb_adc_read(int32_t pin);
+
+/* ── PWM ──────────────────────────────────────────────── */
+
+void rb_pwm_setup(int32_t channel, int32_t pin, int32_t freq, int32_t resolution);
+void rb_pwm_duty(int32_t channel, int32_t duty);
+
+/* ── UART ─────────────────────────────────────────────── */
+
+void rb_uart_setup(int32_t port, int32_t baud, int32_t tx, int32_t rx);
+void rb_uart_write(int32_t port, int32_t data);
+int32_t rb_uart_read(int32_t port);
+
+/* ── Timer ────────────────────────────────────────────── */
+
+void rb_timer_start(void);
+int32_t rb_timer_elapsed(void);
+
+/* ── HTTP ─────────────────────────────────────────────── */
+
+rb_string_t* rb_http_get(rb_string_t* url);
+rb_string_t* rb_http_post(rb_string_t* url, rb_string_t* body);
+
+/* ── NVS (Non-Volatile Storage) ───────────────────────── */
+
+void rb_nvs_write(rb_string_t* key, int32_t value);
+int32_t rb_nvs_read(rb_string_t* key);
+
 /* ── Arrays ───────────────────────────────────────────── */
 
 void rb_array_check_dim_size(int32_t dim_value, int32_t dim_index);

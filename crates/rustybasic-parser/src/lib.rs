@@ -358,6 +358,18 @@ impl Parser {
             Some(TokenKind::WifiStatus) => self.parse_wifi_status(),
             Some(TokenKind::WifiDisconnect) => self.parse_wifi_disconnect(),
             Some(TokenKind::Delay) => self.parse_delay(),
+            Some(TokenKind::AdcRead) => self.parse_adc_read(),
+            Some(TokenKind::PwmSetup) => self.parse_pwm_setup(),
+            Some(TokenKind::PwmDuty) => self.parse_pwm_duty(),
+            Some(TokenKind::UartSetup) => self.parse_uart_setup(),
+            Some(TokenKind::UartWrite) => self.parse_uart_write(),
+            Some(TokenKind::UartRead) => self.parse_uart_read(),
+            Some(TokenKind::TimerStart) => self.parse_timer_start(),
+            Some(TokenKind::TimerElapsed) => self.parse_timer_elapsed(),
+            Some(TokenKind::HttpGet) => self.parse_http_get(),
+            Some(TokenKind::HttpPost) => self.parse_http_post(),
+            Some(TokenKind::NvsWrite) => self.parse_nvs_write(),
+            Some(TokenKind::NvsRead) => self.parse_nvs_read(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -1199,6 +1211,173 @@ impl Parser {
         let ms = self.parse_expr()?;
         Ok(Statement::Delay {
             ms,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_adc_read(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pin = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::AdcRead {
+            pin,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_pwm_setup(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let channel = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let pin = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let freq = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let resolution = self.parse_expr()?;
+        Ok(Statement::PwmSetup {
+            channel,
+            pin,
+            freq,
+            resolution,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_pwm_duty(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let channel = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let duty = self.parse_expr()?;
+        Ok(Statement::PwmDuty {
+            channel,
+            duty,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_uart_setup(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let port = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let baud = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let tx = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let rx = self.parse_expr()?;
+        Ok(Statement::UartSetup {
+            port,
+            baud,
+            tx,
+            rx,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_uart_write(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let port = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let data = self.parse_expr()?;
+        Ok(Statement::UartWrite {
+            port,
+            data,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_uart_read(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let port = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::UartRead {
+            port,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_timer_start(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::TimerStart { span })
+    }
+
+    fn parse_timer_elapsed(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::TimerElapsed {
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_http_get(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let url = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::HttpGet {
+            url,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_http_post(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let url = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let body = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::HttpPost {
+            url,
+            body,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_nvs_write(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let key = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let value = self.parse_expr()?;
+        Ok(Statement::NvsWrite {
+            key,
+            value,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_nvs_read(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let key = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::NvsRead {
+            key,
+            target,
+            var_type,
             span: start.merge(self.prev_span()),
         })
     }
