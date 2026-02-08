@@ -1065,7 +1065,7 @@ impl SemanticAnalyzer {
         }
         // Integer-returning built-ins
         match upper.as_str() {
-            "INT" | "FIX" | "CINT" | "CLNG" | "LEN" | "ASC" | "INSTR" | "LBOUND"
+            "INT" | "FIX" | "SGN" | "CINT" | "CLNG" | "LEN" | "ASC" | "INSTR" | "LBOUND"
             | "UBOUND" | "POS" | "CSRLIN" | "FREEFILE" | "EOF" | "LOC" | "LOF"
             | "SCREEN" | "PEEK" | "INP" | "VARPTR" | "SADD" | "FRE" => {
                 QBType::Integer

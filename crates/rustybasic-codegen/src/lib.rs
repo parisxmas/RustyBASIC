@@ -124,6 +124,20 @@ pub struct Codegen<'ctx> {
     rt_fn_lcase_s: Option<FunctionValue<'ctx>>,
     rt_fn_trim_s: Option<FunctionValue<'ctx>>,
 
+    // Math built-in function declarations
+    rt_fn_sqr: Option<FunctionValue<'ctx>>,
+    rt_fn_abs: Option<FunctionValue<'ctx>>,
+    rt_fn_sin: Option<FunctionValue<'ctx>>,
+    rt_fn_cos: Option<FunctionValue<'ctx>>,
+    rt_fn_tan: Option<FunctionValue<'ctx>>,
+    rt_fn_atn: Option<FunctionValue<'ctx>>,
+    rt_fn_log: Option<FunctionValue<'ctx>>,
+    rt_fn_exp: Option<FunctionValue<'ctx>>,
+    rt_fn_int: Option<FunctionValue<'ctx>>,
+    rt_fn_fix: Option<FunctionValue<'ctx>>,
+    rt_fn_sgn: Option<FunctionValue<'ctx>>,
+    rt_fn_rnd: Option<FunctionValue<'ctx>>,
+
     // GOSUB support
     gosub_return_var: Option<PointerValue<'ctx>>,
     gosub_dispatch_bb: Option<inkwell::basic_block::BasicBlock<'ctx>>,
@@ -212,6 +226,18 @@ impl<'ctx> Codegen<'ctx> {
             rt_fn_ucase_s: None,
             rt_fn_lcase_s: None,
             rt_fn_trim_s: None,
+            rt_fn_sqr: None,
+            rt_fn_abs: None,
+            rt_fn_sin: None,
+            rt_fn_cos: None,
+            rt_fn_tan: None,
+            rt_fn_atn: None,
+            rt_fn_log: None,
+            rt_fn_exp: None,
+            rt_fn_int: None,
+            rt_fn_fix: None,
+            rt_fn_sgn: None,
+            rt_fn_rnd: None,
             gosub_return_var: None,
             gosub_dispatch_bb: None,
             gosub_counter: 0,
@@ -547,6 +573,27 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_fn_trim_s = Some(self.module.add_function(
             "rb_fn_trim_s",
             ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+
+        // ── Math built-in functions ──
+        let f32_to_f32 = f32_t.fn_type(&[BasicMetadataTypeEnum::from(f32_t)], false);
+        let f32_to_i32 = i32_t.fn_type(&[BasicMetadataTypeEnum::from(f32_t)], false);
+
+        self.rt_fn_sqr = Some(self.module.add_function("rb_fn_sqr", f32_to_f32, None));
+        self.rt_fn_abs = Some(self.module.add_function("rb_fn_abs", f32_to_f32, None));
+        self.rt_fn_sin = Some(self.module.add_function("rb_fn_sin", f32_to_f32, None));
+        self.rt_fn_cos = Some(self.module.add_function("rb_fn_cos", f32_to_f32, None));
+        self.rt_fn_tan = Some(self.module.add_function("rb_fn_tan", f32_to_f32, None));
+        self.rt_fn_atn = Some(self.module.add_function("rb_fn_atn", f32_to_f32, None));
+        self.rt_fn_log = Some(self.module.add_function("rb_fn_log", f32_to_f32, None));
+        self.rt_fn_exp = Some(self.module.add_function("rb_fn_exp", f32_to_f32, None));
+        self.rt_fn_int = Some(self.module.add_function("rb_fn_int", f32_to_i32, None));
+        self.rt_fn_fix = Some(self.module.add_function("rb_fn_fix", f32_to_i32, None));
+        self.rt_fn_sgn = Some(self.module.add_function("rb_fn_sgn", f32_to_i32, None));
+        self.rt_fn_rnd = Some(self.module.add_function(
+            "rb_fn_rnd",
+            f32_t.fn_type(&[], false),
             None,
         ));
     }
@@ -2218,6 +2265,48 @@ impl<'ctx> Codegen<'ctx> {
                             )?.try_as_basic_value().left().unwrap();
                             Ok(result)
                         }
+                        // Math built-in functions: (f32) -> f32
+                        "SQR" | "ABS" | "SIN" | "COS" | "TAN" | "ATN" | "LOG" | "EXP" => {
+                            let x = self.compile_expr(&args[0], VarType::Float)?;
+                            let func = match upper.as_str() {
+                                "SQR" => self.rt_fn_sqr.unwrap(),
+                                "ABS" => self.rt_fn_abs.unwrap(),
+                                "SIN" => self.rt_fn_sin.unwrap(),
+                                "COS" => self.rt_fn_cos.unwrap(),
+                                "TAN" => self.rt_fn_tan.unwrap(),
+                                "ATN" => self.rt_fn_atn.unwrap(),
+                                "LOG" => self.rt_fn_log.unwrap(),
+                                "EXP" => self.rt_fn_exp.unwrap(),
+                                _ => unreachable!(),
+                            };
+                            let label = upper.to_lowercase();
+                            let result = self.builder.build_call(
+                                func, &[x.into()], &label
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        // Math built-in functions: (f32) -> i32
+                        "INT" | "FIX" | "SGN" => {
+                            let x = self.compile_expr(&args[0], VarType::Float)?;
+                            let func = match upper.as_str() {
+                                "INT" => self.rt_fn_int.unwrap(),
+                                "FIX" => self.rt_fn_fix.unwrap(),
+                                "SGN" => self.rt_fn_sgn.unwrap(),
+                                _ => unreachable!(),
+                            };
+                            let label = upper.to_lowercase();
+                            let result = self.builder.build_call(
+                                func, &[x.into()], &label
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        // Math built-in function: () -> f32
+                        "RND" => {
+                            let result = self.builder.build_call(
+                                self.rt_fn_rnd.unwrap(), &[], "rnd"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
                         _ => {
                             // Generic fallback for other built-ins (math, etc.)
                             let fn_name = format!("rb_fn_{}", name.to_lowercase());
@@ -2518,7 +2607,7 @@ impl<'ctx> Codegen<'ctx> {
                     return VarType::String;
                 }
                 match upper.as_str() {
-                    "LEN" | "ASC" | "INSTR" => VarType::Integer,
+                    "LEN" | "ASC" | "INSTR" | "INT" | "FIX" | "SGN" => VarType::Integer,
                     "VAL" => VarType::Float,
                     _ => VarType::Float,
                 }

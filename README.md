@@ -498,6 +498,23 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `LCASE$(s$)` | String | Lowercase |
 | `TRIM$(s$)` | String | Strip leading/trailing whitespace |
 
+### Math Functions
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `SQR(x)` | Single | Square root |
+| `ABS(x)` | Single | Absolute value |
+| `SIN(x)` | Single | Sine (radians) |
+| `COS(x)` | Single | Cosine (radians) |
+| `TAN(x)` | Single | Tangent (radians) |
+| `ATN(x)` | Single | Arctangent (radians) |
+| `LOG(x)` | Single | Natural logarithm |
+| `EXP(x)` | Single | e^x |
+| `INT(x)` | Integer | Floor (round toward -infinity) |
+| `FIX(x)` | Integer | Truncate (round toward zero) |
+| `SGN(x)` | Integer | Sign: -1, 0, or 1 |
+| `RND` | Single | Random float in [0, 1) |
+
 ### Hardware (ESP32-C3)
 
 | Statement | Description |
@@ -546,7 +563,8 @@ RustyBASIC/
 │   ├── wifi_scan.bas
 │   ├── include_main.bas
 │   ├── include_lib.bas
-│   └── string_funcs.bas
+│   ├── string_funcs.bas
+│   └── math_funcs.bas
 └── tests/
 ```
 
