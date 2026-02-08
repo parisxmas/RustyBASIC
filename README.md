@@ -424,6 +424,164 @@ END
 
 Paths are resolved relative to the including file's directory. Circular includes are detected and reported as errors.
 
+### ENUM Types
+
+```basic
+ENUM Color
+    Red = 1
+    Green = 2
+    Blue = 3
+END ENUM
+
+DIM c AS INTEGER
+c = Color.Green
+PRINT "Color:"; c        ' prints 2
+```
+
+### FOR EACH (Array Iteration)
+
+```basic
+DIM scores(4) AS INTEGER
+scores(0) = 90
+scores(1) = 85
+scores(2) = 92
+scores(3) = 78
+scores(4) = 95
+
+FOR EACH s AS INTEGER IN scores
+    PRINT "Score:"; s
+NEXT
+
+END
+```
+
+### String Interpolation
+
+```basic
+DIM name AS STRING
+DIM age AS INTEGER
+name = "Alice"
+age = 30
+
+PRINT $"Hello, {name}! You are {age} years old."
+```
+
+### TRY/CATCH Error Handling
+
+```basic
+PRINT "Before try"
+
+TRY
+    PRINT "Inside try block"
+    PRINT "This should work fine"
+CATCH err
+    PRINT "Caught error: "; err
+END TRY
+
+PRINT "After try/catch"
+END
+```
+
+### LAMBDA Expressions
+
+```basic
+DIM square AS FUNCTION
+square = LAMBDA(x AS INTEGER) => x * x
+
+DIM result AS INTEGER
+result = square(5)
+PRINT "5 squared = "; result
+END
+```
+
+### ASSERT
+
+```basic
+DIM x AS INTEGER
+x = 42
+
+ASSERT x > 0, "x must be positive"
+ASSERT x = 42
+PRINT "All assertions passed!"
+END
+```
+
+### TASK (Concurrent Execution)
+
+```basic
+' FreeRTOS tasks on ESP32, pthreads on host
+PRINT "Main task starting"
+
+TASK "blinker", 2048, 1
+    PRINT "Blinker task running"
+    DELAY 1000
+    PRINT "Blinker task done"
+END TASK
+
+PRINT "Main task continues"
+END
+```
+
+### EVENT System
+
+```basic
+DIM count AS INTEGER
+count = 0
+
+ON TIMER 1000 GOSUB tick
+PRINT "Timer event registered"
+DELAY 5000
+PRINT "Count: "; count
+END
+
+tick:
+    count = count + 1
+    PRINT "Tick!"
+RETURN
+```
+
+### State Machine DSL
+
+```basic
+MACHINE TrafficLight
+    STATE RED
+        ON TIMER GOTO GREEN
+    END STATE
+    STATE GREEN
+        ON TIMER GOTO YELLOW
+    END STATE
+    STATE YELLOW
+        ON TIMER GOTO RED
+    END STATE
+END MACHINE
+
+PRINT "Traffic light created"
+TrafficLight.EVENT "TIMER"
+PRINT "After first event"
+END
+```
+
+### MODULE Namespaces
+
+```basic
+MODULE Math
+    FUNCTION Square(x AS INTEGER) AS INTEGER
+        Square = x * x
+    END FUNCTION
+
+    FUNCTION Cube(x AS INTEGER) AS INTEGER
+        Cube = x * x * x
+    END FUNCTION
+END MODULE
+
+DIM a AS INTEGER
+a = Math.Square(4)
+PRINT "4 squared = "; a
+a = Math.Cube(3)
+PRINT "3 cubed = "; a
+END
+```
+
 ### DO...LOOP Variations
 
 ```basic
@@ -505,6 +663,8 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `ON expr GOTO l1, l2, ...` | Computed GOTO (branch by value) |
 | `ON expr GOSUB l1, l2, ...` | Computed GOSUB (branch by value) |
 | `ON ERROR GOTO label` | Set error handler |
+| `FOR EACH var IN array...NEXT` | Iterate over array elements |
+| `TRY...CATCH var...END TRY` | Structured error handling |
 | `EXIT FOR/DO/SUB/FUNCTION` | Early exit |
 
 ### Preprocessor
@@ -568,6 +728,23 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `DATA v1, v2, ...` | Declare inline data (mixed int/float/string) |
 | `READ var1, var2, ...` | Read next item(s) from data pool |
 | `RESTORE` | Reset data read pointer to beginning |
+
+### Advanced Features
+
+| Statement | Description |
+|-----------|-------------|
+| `ASSERT condition [, message$]` | Runtime assertion — aborts with message if condition is false |
+| `ENUM Name...END ENUM` | Define named integer constants (e.g. `Color.Red`) |
+| `$"text {expr} text"` | String interpolation — embeds expressions in strings |
+| `LAMBDA(params) => expr` | Anonymous function expression |
+| `DIM var AS FUNCTION` | Declare a function pointer variable |
+| `TASK name$, stack, priority...END TASK` | Spawn concurrent task (FreeRTOS/pthreads) |
+| `ON GPIO.CHANGE pin GOSUB label` | Register GPIO interrupt handler |
+| `ON TIMER ms GOSUB label` | Register periodic timer event |
+| `ON MQTT.MESSAGE GOSUB label` | Register MQTT message handler |
+| `MACHINE Name...STATE...END MACHINE` | Define finite state machine |
+| `MachineName.EVENT expr$` | Send event to state machine |
+| `MODULE Name...END MODULE` | Group SUBs/FUNCTIONs into namespace (dot-notation access) |
 
 ### Hardware (ESP32-C3)
 
@@ -697,7 +874,17 @@ RustyBASIC/
 │   ├── tone.bas
 │   ├── touch.bas
 │   ├── udp.bas
-│   └── temp.bas
+│   ├── temp.bas
+│   ├── assert.bas
+│   ├── enum.bas
+│   ├── foreach.bas
+│   ├── interpolation.bas
+│   ├── try_catch.bas
+│   ├── lambda.bas
+│   ├── task.bas
+│   ├── events.bas
+│   ├── state_machine.bas
+│   └── module.bas
 └── tests/
 ```
 
