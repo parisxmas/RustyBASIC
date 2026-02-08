@@ -20,4 +20,6 @@ arrays.o
 # ESP-IDF build artifacts
 esp-project/build/
 esp-project/managed_components/
+esp-project/sdkconfig
 esp-project/sdkconfig.old
+esp-project/main/basic_program.o
