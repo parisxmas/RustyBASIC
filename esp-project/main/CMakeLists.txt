@@ -6,6 +6,7 @@ file(GLOB RUNTIME_SOURCES
 idf_component_register(
     SRCS ${RUNTIME_SOURCES}
     INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/../../runtime/include"
+    WHOLE_ARCHIVE
 )
 
 # Link the compiled BASIC program object file

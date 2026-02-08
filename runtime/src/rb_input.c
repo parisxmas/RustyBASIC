@@ -9,9 +9,9 @@ int32_t rb_input_int(const char* prompt) {
         printf("? ");
     }
     fflush(stdout);
-    int32_t value = 0;
+    int value = 0;
     scanf("%d", &value);
-    return value;
+    return (int32_t)value;
 }
 
 float rb_input_float(const char* prompt) {
