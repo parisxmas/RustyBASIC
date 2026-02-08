@@ -142,6 +142,64 @@ float rb_data_read_float(void);
 rb_string_t* rb_data_read_string(void);
 void rb_data_restore(void);
 
+/* ── Classic BASIC extensions ────────────────────────── */
+
+void rb_randomize(int32_t seed);
+void rb_print_using_int(rb_string_t* fmt, int32_t value);
+void rb_print_using_float(rb_string_t* fmt, float value);
+void rb_print_using_string(rb_string_t* fmt, rb_string_t* value);
+void rb_error_clear(void);
+rb_string_t* rb_fn_string_s(int32_t n, int32_t char_code);
+rb_string_t* rb_fn_space_s(int32_t n);
+
+/* ── Touch sensor ────────────────────────────────────── */
+
+int32_t rb_touch_read(int32_t pin);
+
+/* ── Servo ───────────────────────────────────────────── */
+
+void rb_servo_attach(int32_t channel, int32_t pin);
+void rb_servo_write(int32_t channel, int32_t angle);
+
+/* ── Tone ────────────────────────────────────────────── */
+
+void rb_tone(int32_t pin, int32_t freq, int32_t duration_ms);
+
+/* ── IRQ ─────────────────────────────────────────────── */
+
+void rb_irq_attach(int32_t pin, int32_t mode);
+void rb_irq_detach(int32_t pin);
+
+/* ── Temperature sensor ──────────────────────────────── */
+
+float rb_temp_read(void);
+
+/* ── OTA ─────────────────────────────────────────────── */
+
+void rb_ota_update(rb_string_t* url);
+
+/* ── OLED display ────────────────────────────────────── */
+
+void rb_oled_init(int32_t width, int32_t height);
+void rb_oled_print(int32_t x, int32_t y, rb_string_t* text);
+void rb_oled_pixel(int32_t x, int32_t y, int32_t color);
+void rb_oled_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t color);
+void rb_oled_clear(void);
+void rb_oled_show(void);
+
+/* ── LCD display ─────────────────────────────────────── */
+
+void rb_lcd_init(int32_t cols, int32_t rows);
+void rb_lcd_print(rb_string_t* text);
+void rb_lcd_clear(void);
+void rb_lcd_pos(int32_t col, int32_t row);
+
+/* ── UDP ─────────────────────────────────────────────── */
+
+void rb_udp_init(int32_t port);
+void rb_udp_send(rb_string_t* host, int32_t port, rb_string_t* data);
+rb_string_t* rb_udp_receive(void);
+
 /* ── Arrays ───────────────────────────────────────────── */
 
 void rb_array_check_dim_size(int32_t dim_value, int32_t dim_index);

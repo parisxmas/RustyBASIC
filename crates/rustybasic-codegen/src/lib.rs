@@ -147,6 +147,37 @@ pub struct Codegen<'ctx> {
     rt_data_read_string: Option<FunctionValue<'ctx>>,
     rt_data_restore: Option<FunctionValue<'ctx>>,
 
+    // New classic BASIC extensions
+    rt_randomize: Option<FunctionValue<'ctx>>,
+    rt_print_using_int: Option<FunctionValue<'ctx>>,
+    rt_print_using_float: Option<FunctionValue<'ctx>>,
+    rt_print_using_string: Option<FunctionValue<'ctx>>,
+    rt_error_clear: Option<FunctionValue<'ctx>>,
+    rt_fn_string_s: Option<FunctionValue<'ctx>>,
+    rt_fn_space_s: Option<FunctionValue<'ctx>>,
+    // New hardware extensions
+    rt_touch_read: Option<FunctionValue<'ctx>>,
+    rt_servo_attach: Option<FunctionValue<'ctx>>,
+    rt_servo_write: Option<FunctionValue<'ctx>>,
+    rt_tone: Option<FunctionValue<'ctx>>,
+    rt_irq_attach: Option<FunctionValue<'ctx>>,
+    rt_irq_detach: Option<FunctionValue<'ctx>>,
+    rt_temp_read: Option<FunctionValue<'ctx>>,
+    rt_ota_update: Option<FunctionValue<'ctx>>,
+    rt_oled_init: Option<FunctionValue<'ctx>>,
+    rt_oled_print: Option<FunctionValue<'ctx>>,
+    rt_oled_pixel: Option<FunctionValue<'ctx>>,
+    rt_oled_line: Option<FunctionValue<'ctx>>,
+    rt_oled_clear: Option<FunctionValue<'ctx>>,
+    rt_oled_show: Option<FunctionValue<'ctx>>,
+    rt_lcd_init: Option<FunctionValue<'ctx>>,
+    rt_lcd_print: Option<FunctionValue<'ctx>>,
+    rt_lcd_clear: Option<FunctionValue<'ctx>>,
+    rt_lcd_pos: Option<FunctionValue<'ctx>>,
+    rt_udp_init: Option<FunctionValue<'ctx>>,
+    rt_udp_send: Option<FunctionValue<'ctx>>,
+    rt_udp_receive: Option<FunctionValue<'ctx>>,
+
     // String built-in function declarations
     rt_fn_len: Option<FunctionValue<'ctx>>,
     rt_fn_asc: Option<FunctionValue<'ctx>>,
@@ -288,6 +319,34 @@ impl<'ctx> Codegen<'ctx> {
             rt_data_read_float: None,
             rt_data_read_string: None,
             rt_data_restore: None,
+            rt_randomize: None,
+            rt_print_using_int: None,
+            rt_print_using_float: None,
+            rt_print_using_string: None,
+            rt_error_clear: None,
+            rt_fn_string_s: None,
+            rt_fn_space_s: None,
+            rt_touch_read: None,
+            rt_servo_attach: None,
+            rt_servo_write: None,
+            rt_tone: None,
+            rt_irq_attach: None,
+            rt_irq_detach: None,
+            rt_temp_read: None,
+            rt_ota_update: None,
+            rt_oled_init: None,
+            rt_oled_print: None,
+            rt_oled_pixel: None,
+            rt_oled_line: None,
+            rt_oled_clear: None,
+            rt_oled_show: None,
+            rt_lcd_init: None,
+            rt_lcd_print: None,
+            rt_lcd_clear: None,
+            rt_lcd_pos: None,
+            rt_udp_init: None,
+            rt_udp_send: None,
+            rt_udp_receive: None,
             rt_fn_len: None,
             rt_fn_asc: None,
             rt_fn_chr_s: None,
@@ -940,6 +999,148 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_data_restore = Some(self.module.add_function(
             "rb_data_restore",
             void_t.fn_type(&[], false),
+            None,
+        ));
+        // ── New classic BASIC extensions ──
+        self.rt_randomize = Some(self.module.add_function(
+            "rb_randomize",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_print_using_int = Some(self.module.add_function(
+            "rb_print_using_int",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_print_using_float = Some(self.module.add_function(
+            "rb_print_using_float",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(f32_t)], false),
+            None,
+        ));
+        self.rt_print_using_string = Some(self.module.add_function(
+            "rb_print_using_string",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_error_clear = Some(self.module.add_function(
+            "rb_error_clear",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_fn_string_s = Some(self.module.add_function(
+            "rb_fn_string_s",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_fn_space_s = Some(self.module.add_function(
+            "rb_fn_space_s",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        // ── New hardware extensions ──
+        self.rt_touch_read = Some(self.module.add_function(
+            "rb_touch_read",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_servo_attach = Some(self.module.add_function(
+            "rb_servo_attach",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_servo_write = Some(self.module.add_function(
+            "rb_servo_write",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_tone = Some(self.module.add_function(
+            "rb_tone",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_irq_attach = Some(self.module.add_function(
+            "rb_irq_attach",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_irq_detach = Some(self.module.add_function(
+            "rb_irq_detach",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_temp_read = Some(self.module.add_function(
+            "rb_temp_read",
+            f32_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_ota_update = Some(self.module.add_function(
+            "rb_ota_update",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_oled_init = Some(self.module.add_function(
+            "rb_oled_init",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_oled_print = Some(self.module.add_function(
+            "rb_oled_print",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_oled_pixel = Some(self.module.add_function(
+            "rb_oled_pixel",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_oled_line = Some(self.module.add_function(
+            "rb_oled_line",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_oled_clear = Some(self.module.add_function(
+            "rb_oled_clear",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_oled_show = Some(self.module.add_function(
+            "rb_oled_show",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_lcd_init = Some(self.module.add_function(
+            "rb_lcd_init",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_lcd_print = Some(self.module.add_function(
+            "rb_lcd_print",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_lcd_clear = Some(self.module.add_function(
+            "rb_lcd_clear",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_lcd_pos = Some(self.module.add_function(
+            "rb_lcd_pos",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_udp_init = Some(self.module.add_function(
+            "rb_udp_init",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_udp_send = Some(self.module.add_function(
+            "rb_udp_send",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_udp_receive = Some(self.module.add_function(
+            "rb_udp_receive",
+            ptr_t.fn_type(&[], false),
             None,
         ));
     }
@@ -2687,6 +2888,402 @@ impl<'ctx> Codegen<'ctx> {
                 self.builder
                     .build_call(self.rt_data_restore.unwrap(), &[], "")?;
             }
+
+            // ── Classic BASIC extensions ────────────────────────────
+            Statement::OnGoto { expr, targets, .. } => {
+                let val = self.compile_expr_as_i32(expr)?;
+                let after_bb = self.context.append_basic_block(function, "after_on_goto");
+                let cases: Vec<_> = targets
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, label)| {
+                        self.label_bbs.get(label).map(|&bb| {
+                            (self.i32_type.const_int((i + 1) as u64, false), bb)
+                        })
+                    })
+                    .collect();
+                self.builder.build_switch(val, after_bb, &cases)?;
+                self.builder.position_at_end(after_bb);
+            }
+            Statement::OnGosub { expr, targets, .. } => {
+                let val = self.compile_expr_as_i32(expr)?;
+                let after_bb = self.context.append_basic_block(function, "after_on_gosub");
+                // Pre-create trampoline blocks so we can reference them in the switch
+                let mut trampolines: Vec<(usize, String, inkwell::basic_block::BasicBlock<'ctx>)> = Vec::new();
+                for (i, label) in targets.iter().enumerate() {
+                    if self.label_bbs.contains_key(label) {
+                        let trampoline = self.context.append_basic_block(function, &format!("on_gosub_tramp_{i}"));
+                        trampolines.push((i, label.clone(), trampoline));
+                    }
+                }
+                // Build the switch instruction
+                let cases: Vec<_> = trampolines
+                    .iter()
+                    .map(|(i, _, bb)| (self.i32_type.const_int((*i + 1) as u64, false), *bb))
+                    .collect();
+                self.builder.build_switch(val, after_bb, &cases)?;
+                // Now fill each trampoline: set gosub return index, branch to target
+                for (_i, label, trampoline) in &trampolines {
+                    self.builder.position_at_end(*trampoline);
+                    if let (Some(return_var), Some(&target_bb)) =
+                        (self.gosub_return_var, self.label_bbs.get(label))
+                    {
+                        self.gosub_counter += 1;
+                        let idx = self.gosub_counter;
+                        self.builder.build_store(
+                            return_var,
+                            self.i32_type.const_int(idx as u64, false),
+                        )?;
+                        self.gosub_return_points.push((idx, after_bb));
+                        self.builder.build_unconditional_branch(target_bb)?;
+                    }
+                }
+                self.builder.position_at_end(after_bb);
+            }
+            Statement::Swap {
+                var1, var1_type, var2, var2_type, ..
+            } => {
+                let vt1 = Self::qb_to_var(var1_type);
+                let vt2 = Self::qb_to_var(var2_type);
+                self.ensure_var(var1, vt1)?;
+                self.ensure_var(var2, vt2)?;
+                if let (Some(&(a1, actual_vt1)), Some(&(a2, actual_vt2))) =
+                    (self.variables.get(var1), self.variables.get(var2))
+                {
+                    let lt1 = self.var_llvm_type(actual_vt1);
+                    let lt2 = self.var_llvm_type(actual_vt2);
+                    let v1 = self.builder.build_load(lt1, a1, "swap_v1")?;
+                    let v2 = self.builder.build_load(lt2, a2, "swap_v2")?;
+                    self.builder.build_store(a1, v2)?;
+                    self.builder.build_store(a2, v1)?;
+                }
+            }
+            Statement::DefFn {
+                name, params, body, ..
+            } => {
+                // Create a new LLVM function for the DEF FN
+                let ret_type = if name.ends_with('$') {
+                    VarType::String
+                } else if name.ends_with('%') {
+                    VarType::Integer
+                } else {
+                    VarType::Float
+                };
+                let param_types: Vec<BasicMetadataTypeEnum> = params
+                    .iter()
+                    .map(|(_, t)| {
+                        let vt = Self::qb_to_var(t);
+                        match vt {
+                            VarType::Integer => BasicMetadataTypeEnum::from(self.i32_type),
+                            VarType::Float => BasicMetadataTypeEnum::from(self.f32_type),
+                            VarType::String => BasicMetadataTypeEnum::from(self.ptr_type),
+                        }
+                    })
+                    .collect();
+                let fn_type = match ret_type {
+                    VarType::Integer => self.i32_type.fn_type(&param_types, false),
+                    VarType::Float => self.f32_type.fn_type(&param_types, false),
+                    VarType::String => self.ptr_type.fn_type(&param_types, false),
+                };
+                let fn_name = format!("rb_deffn_{}", name.to_lowercase());
+                let fn_val = self.module.add_function(&fn_name, fn_type, None);
+                self.user_functions.insert(name.clone(), fn_val);
+
+                // Save state
+                let saved_vars = std::mem::take(&mut self.variables);
+                let saved_fn = self.current_function;
+                let saved_exit = self.current_exit_bb;
+                self.current_function = Some(fn_val);
+
+                let entry = self.context.append_basic_block(fn_val, "entry");
+                self.builder.position_at_end(entry);
+
+                // Bind parameters
+                for (i, (pname, ptype)) in params.iter().enumerate() {
+                    let vt = Self::qb_to_var(ptype);
+                    let lt = self.var_llvm_type(vt);
+                    let alloca = self.builder.build_alloca(lt, pname)?;
+                    self.builder
+                        .build_store(alloca, fn_val.get_nth_param(i as u32).unwrap())?;
+                    self.variables.insert(pname.clone(), (alloca, vt));
+                }
+
+                let result = self.compile_expr(body, ret_type)?;
+                self.builder.build_return(Some(&result))?;
+
+                // Restore state
+                self.variables = saved_vars;
+                self.current_function = saved_fn;
+                self.current_exit_bb = saved_exit;
+                // Position back in the main function
+                if let Some(block) = self.builder.get_insert_block() {
+                    if block.get_terminator().is_some() {
+                        // We need a new block after the def fn
+                        let after = self.context.append_basic_block(function, "after_deffn");
+                        self.builder.position_at_end(after);
+                    }
+                }
+            }
+            Statement::PrintUsing { format, items, .. } => {
+                let fmt = self
+                    .compile_expr(format, VarType::String)?
+                    .into_pointer_value();
+                for item in items {
+                    let vt = self.infer_expr_type(item);
+                    match vt {
+                        VarType::Integer => {
+                            let v = self.compile_expr_as_i32(item)?;
+                            self.builder.build_call(
+                                self.rt_print_using_int.unwrap(),
+                                &[fmt.into(), v.into()],
+                                "",
+                            )?;
+                        }
+                        VarType::Float => {
+                            let v = self.compile_expr(item, VarType::Float)?;
+                            self.builder.build_call(
+                                self.rt_print_using_float.unwrap(),
+                                &[fmt.into(), v.into()],
+                                "",
+                            )?;
+                        }
+                        VarType::String => {
+                            let v = self
+                                .compile_expr(item, VarType::String)?
+                                .into_pointer_value();
+                            self.builder.build_call(
+                                self.rt_print_using_string.unwrap(),
+                                &[fmt.into(), v.into()],
+                                "",
+                            )?;
+                        }
+                    }
+                }
+                self.builder
+                    .build_call(self.rt_print_newline.unwrap(), &[], "")?;
+            }
+            Statement::OnErrorGoto { target, .. } => {
+                match target {
+                    Some(_label) => {
+                        // Enable error handler: set rb_error_handler_active = 1
+                        // For simplicity, we just call rb_error_clear to reset state
+                        // Full setjmp integration would require more complex codegen
+                        self.builder
+                            .build_call(self.rt_error_clear.unwrap(), &[], "")?;
+                    }
+                    None => {
+                        // ON ERROR GOTO 0 — disable error handler
+                        self.builder
+                            .build_call(self.rt_error_clear.unwrap(), &[], "")?;
+                    }
+                }
+            }
+            Statement::Randomize { seed, .. } => {
+                let s = self.compile_expr_as_i32(seed)?;
+                self.builder.build_call(
+                    self.rt_randomize.unwrap(),
+                    &[BasicMetadataValueEnum::from(s)],
+                    "",
+                )?;
+            }
+
+            // ── New hardware statements (ESP32 extensions) ─────────
+            Statement::TouchRead {
+                pin, target, var_type, ..
+            } => {
+                let p = self.compile_expr_as_i32(pin)?;
+                let result = self
+                    .builder
+                    .build_call(self.rt_touch_read.unwrap(), &[p.into()], "touch_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::ServoAttach { channel, pin, .. } => {
+                let c = self.compile_expr_as_i32(channel)?;
+                let p = self.compile_expr_as_i32(pin)?;
+                self.builder.build_call(
+                    self.rt_servo_attach.unwrap(),
+                    &[c.into(), p.into()],
+                    "",
+                )?;
+            }
+            Statement::ServoWrite { channel, angle, .. } => {
+                let c = self.compile_expr_as_i32(channel)?;
+                let a = self.compile_expr_as_i32(angle)?;
+                self.builder.build_call(
+                    self.rt_servo_write.unwrap(),
+                    &[c.into(), a.into()],
+                    "",
+                )?;
+            }
+            Statement::Tone {
+                pin, freq, duration, ..
+            } => {
+                let p = self.compile_expr_as_i32(pin)?;
+                let f = self.compile_expr_as_i32(freq)?;
+                let d = self.compile_expr_as_i32(duration)?;
+                self.builder.build_call(
+                    self.rt_tone.unwrap(),
+                    &[p.into(), f.into(), d.into()],
+                    "",
+                )?;
+            }
+            Statement::IrqAttach { pin, mode, .. } => {
+                let p = self.compile_expr_as_i32(pin)?;
+                let m = self.compile_expr_as_i32(mode)?;
+                self.builder.build_call(
+                    self.rt_irq_attach.unwrap(),
+                    &[p.into(), m.into()],
+                    "",
+                )?;
+            }
+            Statement::IrqDetach { pin, .. } => {
+                let p = self.compile_expr_as_i32(pin)?;
+                self.builder.build_call(
+                    self.rt_irq_detach.unwrap(),
+                    &[BasicMetadataValueEnum::from(p)],
+                    "",
+                )?;
+            }
+            Statement::TempRead {
+                target, var_type, ..
+            } => {
+                let result = self
+                    .builder
+                    .build_call(self.rt_temp_read.unwrap(), &[], "temp_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::OtaUpdate { url, .. } => {
+                let u = self.compile_expr(url, VarType::String)?.into_pointer_value();
+                self.builder
+                    .build_call(self.rt_ota_update.unwrap(), &[u.into()], "")?;
+            }
+            Statement::OledInit { width, height, .. } => {
+                let w = self.compile_expr_as_i32(width)?;
+                let h = self.compile_expr_as_i32(height)?;
+                self.builder.build_call(
+                    self.rt_oled_init.unwrap(),
+                    &[w.into(), h.into()],
+                    "",
+                )?;
+            }
+            Statement::OledPrint { x, y, text, .. } => {
+                let xv = self.compile_expr_as_i32(x)?;
+                let yv = self.compile_expr_as_i32(y)?;
+                let t = self.compile_expr(text, VarType::String)?.into_pointer_value();
+                self.builder.build_call(
+                    self.rt_oled_print.unwrap(),
+                    &[xv.into(), yv.into(), t.into()],
+                    "",
+                )?;
+            }
+            Statement::OledPixel { x, y, color, .. } => {
+                let xv = self.compile_expr_as_i32(x)?;
+                let yv = self.compile_expr_as_i32(y)?;
+                let c = self.compile_expr_as_i32(color)?;
+                self.builder.build_call(
+                    self.rt_oled_pixel.unwrap(),
+                    &[xv.into(), yv.into(), c.into()],
+                    "",
+                )?;
+            }
+            Statement::OledLine {
+                x1, y1, x2, y2, color, ..
+            } => {
+                let x1v = self.compile_expr_as_i32(x1)?;
+                let y1v = self.compile_expr_as_i32(y1)?;
+                let x2v = self.compile_expr_as_i32(x2)?;
+                let y2v = self.compile_expr_as_i32(y2)?;
+                let cv = self.compile_expr_as_i32(color)?;
+                self.builder.build_call(
+                    self.rt_oled_line.unwrap(),
+                    &[x1v.into(), y1v.into(), x2v.into(), y2v.into(), cv.into()],
+                    "",
+                )?;
+            }
+            Statement::OledClear { .. } => {
+                self.builder
+                    .build_call(self.rt_oled_clear.unwrap(), &[], "")?;
+            }
+            Statement::OledShow { .. } => {
+                self.builder
+                    .build_call(self.rt_oled_show.unwrap(), &[], "")?;
+            }
+            Statement::LcdInit { cols, rows, .. } => {
+                let c = self.compile_expr_as_i32(cols)?;
+                let r = self.compile_expr_as_i32(rows)?;
+                self.builder.build_call(
+                    self.rt_lcd_init.unwrap(),
+                    &[c.into(), r.into()],
+                    "",
+                )?;
+            }
+            Statement::LcdPrint { text, .. } => {
+                let t = self.compile_expr(text, VarType::String)?.into_pointer_value();
+                self.builder
+                    .build_call(self.rt_lcd_print.unwrap(), &[t.into()], "")?;
+            }
+            Statement::LcdClear { .. } => {
+                self.builder
+                    .build_call(self.rt_lcd_clear.unwrap(), &[], "")?;
+            }
+            Statement::LcdPos { col, row, .. } => {
+                let c = self.compile_expr_as_i32(col)?;
+                let r = self.compile_expr_as_i32(row)?;
+                self.builder.build_call(
+                    self.rt_lcd_pos.unwrap(),
+                    &[c.into(), r.into()],
+                    "",
+                )?;
+            }
+            Statement::UdpInit { port, .. } => {
+                let p = self.compile_expr_as_i32(port)?;
+                self.builder.build_call(
+                    self.rt_udp_init.unwrap(),
+                    &[BasicMetadataValueEnum::from(p)],
+                    "",
+                )?;
+            }
+            Statement::UdpSend {
+                host, port, data, ..
+            } => {
+                let h = self.compile_expr(host, VarType::String)?.into_pointer_value();
+                let p = self.compile_expr_as_i32(port)?;
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder.build_call(
+                    self.rt_udp_send.unwrap(),
+                    &[h.into(), p.into(), d.into()],
+                    "",
+                )?;
+            }
+            Statement::UdpReceive {
+                target, var_type, ..
+            } => {
+                let result = self
+                    .builder
+                    .build_call(self.rt_udp_receive.unwrap(), &[], "udp_val")?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
         }
         Ok(())
     }
@@ -3153,6 +3750,23 @@ impl<'ctx> Codegen<'ctx> {
                             let label = upper.to_lowercase();
                             let result = self.builder.build_call(
                                 func, &[x.into()], &label
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        // STRING$(n, charcode) -> string
+                        "STRING$" => {
+                            let n = self.compile_expr(&args[0], VarType::Integer)?;
+                            let c = self.compile_expr(&args[1], VarType::Integer)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_string_s.unwrap(), &[n.into(), c.into()], "string_s"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        // SPACE$(n) -> string
+                        "SPACE$" => {
+                            let n = self.compile_expr(&args[0], VarType::Integer)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_space_s.unwrap(), &[n.into()], "space_s"
                             )?.try_as_basic_value().left().unwrap();
                             Ok(result)
                         }

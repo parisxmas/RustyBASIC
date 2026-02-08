@@ -219,6 +219,64 @@ pub enum TokenKind {
     #[regex(r"(?i:RESTORE)")]
     Restore,
 
+    // ── Classic BASIC extensions ─────────────────────────
+    #[regex(r"(?i:ON)")]
+    On,
+    #[regex(r"(?i:SWAP)")]
+    Swap,
+    #[regex(r"(?i:DEF)")]
+    Def,
+    #[regex(r"(?i:RANDOMIZE)")]
+    Randomize,
+    #[regex(r"(?i:USING)")]
+    Using,
+    #[regex(r"(?i:ERROR)")]
+    Error,
+
+    // ── New hardware keywords (ESP32 extensions) ─────────
+    #[regex(r"(?i:TOUCH\.READ)")]
+    TouchRead,
+    #[regex(r"(?i:SERVO\.ATTACH)")]
+    ServoAttach,
+    #[regex(r"(?i:SERVO\.WRITE)")]
+    ServoWrite,
+    #[regex(r"(?i:TONE)")]
+    Tone,
+    #[regex(r"(?i:IRQ\.ATTACH)")]
+    IrqAttach,
+    #[regex(r"(?i:IRQ\.DETACH)")]
+    IrqDetach,
+    #[regex(r"(?i:TEMP\.READ)")]
+    TempRead,
+    #[regex(r"(?i:OTA\.UPDATE)")]
+    OtaUpdate,
+    #[regex(r"(?i:OLED\.INIT)")]
+    OledInit,
+    #[regex(r"(?i:OLED\.PRINT)")]
+    OledPrint,
+    #[regex(r"(?i:OLED\.PIXEL)")]
+    OledPixel,
+    #[regex(r"(?i:OLED\.LINE)")]
+    OledLine,
+    #[regex(r"(?i:OLED\.CLEAR)")]
+    OledClear,
+    #[regex(r"(?i:OLED\.SHOW)")]
+    OledShow,
+    #[regex(r"(?i:LCD\.INIT)")]
+    LcdInit,
+    #[regex(r"(?i:LCD\.PRINT)")]
+    LcdPrint,
+    #[regex(r"(?i:LCD\.CLEAR)")]
+    LcdClear,
+    #[regex(r"(?i:LCD\.POS)")]
+    LcdPos,
+    #[regex(r"(?i:UDP\.INIT)")]
+    UdpInit,
+    #[regex(r"(?i:UDP\.SEND)")]
+    UdpSend,
+    #[regex(r"(?i:UDP\.RECEIVE)")]
+    UdpReceive,
+
     // ── Literals ────────────────────────────────────────────
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
     #[regex(r"\.[0-9]+([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
@@ -396,6 +454,33 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Data => write!(f, "DATA"),
             TokenKind::Read => write!(f, "READ"),
             TokenKind::Restore => write!(f, "RESTORE"),
+            TokenKind::On => write!(f, "ON"),
+            TokenKind::Swap => write!(f, "SWAP"),
+            TokenKind::Def => write!(f, "DEF"),
+            TokenKind::Randomize => write!(f, "RANDOMIZE"),
+            TokenKind::Using => write!(f, "USING"),
+            TokenKind::Error => write!(f, "ERROR"),
+            TokenKind::TouchRead => write!(f, "TOUCH.READ"),
+            TokenKind::ServoAttach => write!(f, "SERVO.ATTACH"),
+            TokenKind::ServoWrite => write!(f, "SERVO.WRITE"),
+            TokenKind::Tone => write!(f, "TONE"),
+            TokenKind::IrqAttach => write!(f, "IRQ.ATTACH"),
+            TokenKind::IrqDetach => write!(f, "IRQ.DETACH"),
+            TokenKind::TempRead => write!(f, "TEMP.READ"),
+            TokenKind::OtaUpdate => write!(f, "OTA.UPDATE"),
+            TokenKind::OledInit => write!(f, "OLED.INIT"),
+            TokenKind::OledPrint => write!(f, "OLED.PRINT"),
+            TokenKind::OledPixel => write!(f, "OLED.PIXEL"),
+            TokenKind::OledLine => write!(f, "OLED.LINE"),
+            TokenKind::OledClear => write!(f, "OLED.CLEAR"),
+            TokenKind::OledShow => write!(f, "OLED.SHOW"),
+            TokenKind::LcdInit => write!(f, "LCD.INIT"),
+            TokenKind::LcdPrint => write!(f, "LCD.PRINT"),
+            TokenKind::LcdClear => write!(f, "LCD.CLEAR"),
+            TokenKind::LcdPos => write!(f, "LCD.POS"),
+            TokenKind::UdpInit => write!(f, "UDP.INIT"),
+            TokenKind::UdpSend => write!(f, "UDP.SEND"),
+            TokenKind::UdpReceive => write!(f, "UDP.RECEIVE"),
             TokenKind::FloatLiteral(v) => write!(f, "{v}"),
             TokenKind::IntLiteral(v) => write!(f, "{v}"),
             TokenKind::StringLiteral(v) => write!(f, "\"{v}\""),

@@ -485,6 +485,156 @@ pub enum Statement {
         span: Span,
     },
 
+    // ── Classic BASIC extensions ──
+    /// ON expr GOTO label1, label2, ...
+    OnGoto {
+        expr: Expr,
+        targets: Vec<String>,
+        span: Span,
+    },
+    /// ON expr GOSUB label1, label2, ...
+    OnGosub {
+        expr: Expr,
+        targets: Vec<String>,
+        span: Span,
+    },
+    /// SWAP var1, var2
+    Swap {
+        var1: String,
+        var1_type: QBType,
+        var2: String,
+        var2_type: QBType,
+        span: Span,
+    },
+    /// DEF FNname(params) = expr
+    DefFn {
+        name: String,
+        params: Vec<(String, QBType)>,
+        body: Expr,
+        span: Span,
+    },
+    /// PRINT USING fmt$; items...
+    PrintUsing {
+        format: Expr,
+        items: Vec<Expr>,
+        span: Span,
+    },
+    /// ON ERROR GOTO label (None = GOTO 0, disable handler)
+    OnErrorGoto {
+        target: Option<String>,
+        span: Span,
+    },
+    /// RANDOMIZE seed
+    Randomize {
+        seed: Expr,
+        span: Span,
+    },
+
+    // ── New hardware statements (ESP32 extensions) ──
+    TouchRead {
+        pin: Expr,
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    ServoAttach {
+        channel: Expr,
+        pin: Expr,
+        span: Span,
+    },
+    ServoWrite {
+        channel: Expr,
+        angle: Expr,
+        span: Span,
+    },
+    Tone {
+        pin: Expr,
+        freq: Expr,
+        duration: Expr,
+        span: Span,
+    },
+    IrqAttach {
+        pin: Expr,
+        mode: Expr,
+        span: Span,
+    },
+    IrqDetach {
+        pin: Expr,
+        span: Span,
+    },
+    TempRead {
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+    OtaUpdate {
+        url: Expr,
+        span: Span,
+    },
+    OledInit {
+        width: Expr,
+        height: Expr,
+        span: Span,
+    },
+    OledPrint {
+        x: Expr,
+        y: Expr,
+        text: Expr,
+        span: Span,
+    },
+    OledPixel {
+        x: Expr,
+        y: Expr,
+        color: Expr,
+        span: Span,
+    },
+    OledLine {
+        x1: Expr,
+        y1: Expr,
+        x2: Expr,
+        y2: Expr,
+        color: Expr,
+        span: Span,
+    },
+    OledClear {
+        span: Span,
+    },
+    OledShow {
+        span: Span,
+    },
+    LcdInit {
+        cols: Expr,
+        rows: Expr,
+        span: Span,
+    },
+    LcdPrint {
+        text: Expr,
+        span: Span,
+    },
+    LcdClear {
+        span: Span,
+    },
+    LcdPos {
+        col: Expr,
+        row: Expr,
+        span: Span,
+    },
+    UdpInit {
+        port: Expr,
+        span: Span,
+    },
+    UdpSend {
+        host: Expr,
+        port: Expr,
+        data: Expr,
+        span: Span,
+    },
+    UdpReceive {
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
+
     /// Array element assignment: arr(i, j) = expr
     ArrayAssign {
         name: String,

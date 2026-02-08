@@ -1,0 +1,9 @@
+' LCD Display Example
+' HD44780 compatible 16x2 LCD
+
+LCD.INIT 16, 2
+LCD.CLEAR
+LCD.POS 0, 0
+LCD.PRINT "Hello LCD!"
+LCD.POS 0, 1
+LCD.PRINT "RustyBASIC v1.0"

@@ -394,6 +394,32 @@ impl Parser {
             Some(TokenKind::Data) => self.parse_data(),
             Some(TokenKind::Read) => self.parse_read(),
             Some(TokenKind::Restore) => self.parse_restore(),
+            Some(TokenKind::On) => self.parse_on(),
+            Some(TokenKind::Swap) => self.parse_swap(),
+            Some(TokenKind::Def) => self.parse_def_fn(),
+            Some(TokenKind::Randomize) => self.parse_randomize(),
+            // PRINT USING is handled inside parse_print via lookahead
+            Some(TokenKind::TouchRead) => self.parse_touch_read(),
+            Some(TokenKind::ServoAttach) => self.parse_servo_attach(),
+            Some(TokenKind::ServoWrite) => self.parse_servo_write(),
+            Some(TokenKind::Tone) => self.parse_tone(),
+            Some(TokenKind::IrqAttach) => self.parse_irq_attach(),
+            Some(TokenKind::IrqDetach) => self.parse_irq_detach(),
+            Some(TokenKind::TempRead) => self.parse_temp_read(),
+            Some(TokenKind::OtaUpdate) => self.parse_ota_update(),
+            Some(TokenKind::OledInit) => self.parse_oled_init(),
+            Some(TokenKind::OledPrint) => self.parse_oled_print(),
+            Some(TokenKind::OledPixel) => self.parse_oled_pixel(),
+            Some(TokenKind::OledLine) => self.parse_oled_line(),
+            Some(TokenKind::OledClear) => self.parse_oled_clear(),
+            Some(TokenKind::OledShow) => self.parse_oled_show(),
+            Some(TokenKind::LcdInit) => self.parse_lcd_init(),
+            Some(TokenKind::LcdPrint) => self.parse_lcd_print(),
+            Some(TokenKind::LcdClear) => self.parse_lcd_clear(),
+            Some(TokenKind::LcdPos) => self.parse_lcd_pos(),
+            Some(TokenKind::UdpInit) => self.parse_udp_init(),
+            Some(TokenKind::UdpSend) => self.parse_udp_send(),
+            Some(TokenKind::UdpReceive) => self.parse_udp_receive(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -527,6 +553,26 @@ impl Parser {
     fn parse_print(&mut self) -> ParseResult<Statement> {
         let start = self.current_span();
         self.advance(); // PRINT
+
+        // Check for PRINT USING
+        if self.eat(TokenKind::Using) {
+            let format = self.parse_expr()?;
+            self.expect(TokenKind::Semicolon)?;
+            let mut items = Vec::new();
+            items.push(self.parse_expr()?);
+            while self.eat(TokenKind::Semicolon) || self.eat(TokenKind::Comma) {
+                if self.at_newline() || self.at_end() {
+                    break;
+                }
+                items.push(self.parse_expr()?);
+            }
+            return Ok(Statement::PrintUsing {
+                format,
+                items,
+                span: start.merge(self.prev_span()),
+            });
+        }
+
         let mut items = Vec::new();
         while !self.at_newline() && !self.at_end() && !self.check(TokenKind::Colon)
             && !self.check(TokenKind::Else)
@@ -1702,6 +1748,371 @@ impl Parser {
         let span = self.current_span();
         self.advance(); // RESTORE
         Ok(Statement::Restore { span })
+    }
+
+    // ── Classic BASIC extensions ──────────────────────────────
+
+    /// Parse ON ... GOTO / ON ... GOSUB / ON ERROR GOTO
+    fn parse_on(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // ON
+
+        // ON ERROR GOTO label
+        if self.eat(TokenKind::Error) {
+            self.expect(TokenKind::Goto)?;
+            let target = if let Some(TokenKind::IntLiteral(0)) = self.peek_kind() {
+                self.advance();
+                None // ON ERROR GOTO 0 disables handler
+            } else {
+                Some(self.expect_label_target()?)
+            };
+            return Ok(Statement::OnErrorGoto {
+                target,
+                span: start.merge(self.prev_span()),
+            });
+        }
+
+        // ON expr GOTO/GOSUB label1, label2, ...
+        let expr = self.parse_expr()?;
+        let is_goto = if self.eat(TokenKind::Goto) {
+            true
+        } else if self.eat(TokenKind::Gosub) {
+            false
+        } else {
+            return Err(self.error("expected GOTO or GOSUB after ON expression"));
+        };
+
+        let mut targets = Vec::new();
+        targets.push(self.expect_label_target()?);
+        while self.eat(TokenKind::Comma) {
+            targets.push(self.expect_label_target()?);
+        }
+
+        let span = start.merge(self.prev_span());
+        if is_goto {
+            Ok(Statement::OnGoto { expr, targets, span })
+        } else {
+            Ok(Statement::OnGosub { expr, targets, span })
+        }
+    }
+
+    fn parse_swap(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // SWAP
+        let (var1, var1_type) = self.expect_variable()?;
+        self.expect(TokenKind::Comma)?;
+        let (var2, var2_type) = self.expect_variable()?;
+        Ok(Statement::Swap {
+            var1,
+            var1_type,
+            var2,
+            var2_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_def_fn(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // DEF
+        // Expect function name starting with FN
+        let (name, _) = self.expect_variable()?;
+        if !name.starts_with("FN") {
+            return Err(self.error("DEF function name must start with FN"));
+        }
+        // Optional parameter list
+        let params = if self.eat(TokenKind::LParen) {
+            let mut p = Vec::new();
+            if !self.check(TokenKind::RParen) {
+                let (pname, ptype) = self.expect_variable()?;
+                p.push((pname, ptype));
+                while self.eat(TokenKind::Comma) {
+                    let (pname, ptype) = self.expect_variable()?;
+                    p.push((pname, ptype));
+                }
+            }
+            self.expect(TokenKind::RParen)?;
+            p
+        } else {
+            Vec::new()
+        };
+        self.expect(TokenKind::Eq)?;
+        let body = self.parse_expr()?;
+        Ok(Statement::DefFn {
+            name,
+            params,
+            body,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_randomize(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // RANDOMIZE
+        let seed = self.parse_expr()?;
+        Ok(Statement::Randomize {
+            seed,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    // ── New hardware parse functions ────────────────────────
+
+    fn parse_touch_read(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pin = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::TouchRead {
+            pin,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_servo_attach(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let channel = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let pin = self.parse_expr()?;
+        Ok(Statement::ServoAttach {
+            channel,
+            pin,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_servo_write(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let channel = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let angle = self.parse_expr()?;
+        Ok(Statement::ServoWrite {
+            channel,
+            angle,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_tone(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pin = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let freq = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let duration = self.parse_expr()?;
+        Ok(Statement::Tone {
+            pin,
+            freq,
+            duration,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_irq_attach(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pin = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let mode = self.parse_expr()?;
+        Ok(Statement::IrqAttach {
+            pin,
+            mode,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_irq_detach(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pin = self.parse_expr()?;
+        Ok(Statement::IrqDetach {
+            pin,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_temp_read(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::TempRead {
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_ota_update(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let url = self.parse_expr()?;
+        Ok(Statement::OtaUpdate {
+            url,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_oled_init(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let width = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let height = self.parse_expr()?;
+        Ok(Statement::OledInit {
+            width,
+            height,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_oled_print(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let x = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let y = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let text = self.parse_expr()?;
+        Ok(Statement::OledPrint {
+            x,
+            y,
+            text,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_oled_pixel(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let x = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let y = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let color = self.parse_expr()?;
+        Ok(Statement::OledPixel {
+            x,
+            y,
+            color,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_oled_line(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let x1 = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let y1 = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let x2 = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let y2 = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let color = self.parse_expr()?;
+        Ok(Statement::OledLine {
+            x1,
+            y1,
+            x2,
+            y2,
+            color,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_oled_clear(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::OledClear { span })
+    }
+
+    fn parse_oled_show(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::OledShow { span })
+    }
+
+    fn parse_lcd_init(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let cols = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let rows = self.parse_expr()?;
+        Ok(Statement::LcdInit {
+            cols,
+            rows,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_lcd_print(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let text = self.parse_expr()?;
+        Ok(Statement::LcdPrint {
+            text,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_lcd_clear(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::LcdClear { span })
+    }
+
+    fn parse_lcd_pos(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let col = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let row = self.parse_expr()?;
+        Ok(Statement::LcdPos {
+            col,
+            row,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_udp_init(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let port = self.parse_expr()?;
+        Ok(Statement::UdpInit {
+            port,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_udp_send(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let host = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let port = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let data = self.parse_expr()?;
+        Ok(Statement::UdpSend {
+            host,
+            port,
+            data,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_udp_receive(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::UdpReceive {
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
     }
 
     // ── Block parsing ───────────────────────────────────────

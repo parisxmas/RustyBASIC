@@ -927,6 +927,146 @@ impl SemanticAnalyzer {
                 }
             }
             Statement::Restore { .. } => {}
+            Statement::OnGoto { expr, targets, span } => {
+                self.check_expr(expr);
+                for target in targets {
+                    self.goto_targets.push((target.clone(), *span));
+                }
+            }
+            Statement::OnGosub { expr, targets, span } => {
+                self.check_expr(expr);
+                self.has_gosub = true;
+                for target in targets {
+                    self.gosub_targets.insert(target.clone());
+                    self.goto_targets.push((target.clone(), *span));
+                }
+            }
+            Statement::Swap {
+                var1, var1_type, var2, var2_type, span,
+            } => {
+                self.declare_or_check_var(var1, var1_type, *span);
+                self.declare_or_check_var(var2, var2_type, *span);
+            }
+            Statement::DefFn { name, params, body, span } => {
+                // Register as a function
+                let param_types: Vec<QBType> = params.iter().map(|(_, t)| t.clone()).collect();
+                let return_type = if name.ends_with('$') {
+                    QBType::String
+                } else if name.ends_with('%') {
+                    QBType::Integer
+                } else {
+                    QBType::Single
+                };
+                self.functions.insert(
+                    name.clone(),
+                    FunctionInfo {
+                        params: param_types,
+                        return_type,
+                        span: *span,
+                    },
+                );
+                // Register params as variables and check body expression
+                for (pname, ptype) in params {
+                    self.register_var(pname, ptype);
+                }
+                self.check_expr(body);
+            }
+            Statement::PrintUsing { format, items, .. } => {
+                self.check_expr(format);
+                for item in items {
+                    self.check_expr(item);
+                }
+            }
+            Statement::OnErrorGoto { target, span } => {
+                if let Some(t) = target {
+                    self.goto_targets.push((t.clone(), *span));
+                }
+            }
+            Statement::Randomize { seed, .. } => {
+                self.check_expr(seed);
+            }
+            Statement::TouchRead {
+                pin, target, var_type, span,
+            } => {
+                self.check_expr(pin);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::ServoAttach { channel, pin, .. } => {
+                self.check_expr(channel);
+                self.check_expr(pin);
+            }
+            Statement::ServoWrite { channel, angle, .. } => {
+                self.check_expr(channel);
+                self.check_expr(angle);
+            }
+            Statement::Tone { pin, freq, duration, .. } => {
+                self.check_expr(pin);
+                self.check_expr(freq);
+                self.check_expr(duration);
+            }
+            Statement::IrqAttach { pin, mode, .. } => {
+                self.check_expr(pin);
+                self.check_expr(mode);
+            }
+            Statement::IrqDetach { pin, .. } => {
+                self.check_expr(pin);
+            }
+            Statement::TempRead {
+                target, var_type, span,
+            } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::OtaUpdate { url, .. } => {
+                self.check_expr(url);
+            }
+            Statement::OledInit { width, height, .. } => {
+                self.check_expr(width);
+                self.check_expr(height);
+            }
+            Statement::OledPrint { x, y, text, .. } => {
+                self.check_expr(x);
+                self.check_expr(y);
+                self.check_expr(text);
+            }
+            Statement::OledPixel { x, y, color, .. } => {
+                self.check_expr(x);
+                self.check_expr(y);
+                self.check_expr(color);
+            }
+            Statement::OledLine { x1, y1, x2, y2, color, .. } => {
+                self.check_expr(x1);
+                self.check_expr(y1);
+                self.check_expr(x2);
+                self.check_expr(y2);
+                self.check_expr(color);
+            }
+            Statement::OledClear { .. } => {}
+            Statement::OledShow { .. } => {}
+            Statement::LcdInit { cols, rows, .. } => {
+                self.check_expr(cols);
+                self.check_expr(rows);
+            }
+            Statement::LcdPrint { text, .. } => {
+                self.check_expr(text);
+            }
+            Statement::LcdClear { .. } => {}
+            Statement::LcdPos { col, row, .. } => {
+                self.check_expr(col);
+                self.check_expr(row);
+            }
+            Statement::UdpInit { port, .. } => {
+                self.check_expr(port);
+            }
+            Statement::UdpSend { host, port, data, .. } => {
+                self.check_expr(host);
+                self.check_expr(port);
+                self.check_expr(data);
+            }
+            Statement::UdpReceive {
+                target, var_type, span,
+            } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
             Statement::ArrayAssign {
                 name,
                 var_type: _,

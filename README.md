@@ -502,6 +502,9 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `WHILE...WEND` | Legacy while loop |
 | `GOTO label` | Unconditional jump |
 | `GOSUB label` / `RETURN` | Subroutine call/return |
+| `ON expr GOTO l1, l2, ...` | Computed GOTO (branch by value) |
+| `ON expr GOSUB l1, l2, ...` | Computed GOSUB (branch by value) |
+| `ON ERROR GOTO label` | Set error handler |
 | `EXIT FOR/DO/SUB/FUNCTION` | Early exit |
 
 ### Preprocessor
@@ -515,6 +518,7 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | Statement | Description |
 |-----------|-------------|
 | `PRINT expr; expr` | Output (`;` = no space, `,` = tab) |
+| `PRINT USING fmt$; expr` | Formatted output |
 | `INPUT "prompt"; var` | Read user input |
 | `LINE INPUT "prompt"; var$` | Read entire line |
 
@@ -534,6 +538,8 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `UCASE$(s$)` | String | Uppercase |
 | `LCASE$(s$)` | String | Lowercase |
 | `TRIM$(s$)` | String | Strip leading/trailing whitespace |
+| `STRING$(n, code)` | String | String of n characters with ASCII code |
+| `SPACE$(n)` | String | String of n spaces |
 
 ### Math Functions
 
@@ -551,6 +557,17 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `FIX(x)` | Integer | Truncate (round toward zero) |
 | `SGN(x)` | Integer | Sign: -1, 0, or 1 |
 | `RND` | Single | Random float in [0, 1) |
+| `RANDOMIZE seed` | — | Seed the random number generator |
+
+### Classic BASIC
+
+| Statement | Description |
+|-----------|-------------|
+| `SWAP var1, var2` | Exchange values of two variables |
+| `DEF FNname(params) = expr` | Define inline function |
+| `DATA v1, v2, ...` | Declare inline data (mixed int/float/string) |
+| `READ var1, var2, ...` | Read next item(s) from data pool |
+| `RESTORE` | Reset data read pointer to beginning |
 
 ### Hardware (ESP32-C3)
 
@@ -601,9 +618,27 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `ESPNOW.INIT` | Initialize ESP-NOW peer-to-peer networking |
 | `ESPNOW.SEND peer$, data$` | Send data to peer MAC address |
 | `ESPNOW.RECEIVE var$` | Receive ESP-NOW message (blocking) |
-| `DATA v1, v2, ...` | Declare inline data (mixed int/float/string) |
-| `READ var1, var2, ...` | Read next item(s) from data pool |
-| `RESTORE` | Reset data read pointer to beginning |
+| `TOUCH.READ pin, var` | Read capacitive touch sensor |
+| `SERVO.ATTACH ch, pin` | Attach servo on PWM channel to pin |
+| `SERVO.WRITE ch, angle` | Set servo angle (0-180 degrees) |
+| `TONE pin, freq, duration` | Generate tone on pin (freq Hz, duration ms) |
+| `IRQ.ATTACH pin, mode` | Attach GPIO interrupt handler |
+| `IRQ.DETACH pin` | Detach GPIO interrupt handler |
+| `TEMP.READ var` | Read internal temperature sensor |
+| `OTA.UPDATE url$` | Over-the-air firmware update from URL |
+| `OLED.INIT w, h` | Initialize SSD1306 OLED display |
+| `OLED.PRINT x, y, text$` | Draw text at position |
+| `OLED.PIXEL x, y, color` | Set pixel on/off |
+| `OLED.LINE x1, y1, x2, y2, c` | Draw line |
+| `OLED.CLEAR` | Clear display buffer |
+| `OLED.SHOW` | Push buffer to OLED |
+| `LCD.INIT cols, rows` | Initialize HD44780 LCD |
+| `LCD.PRINT text$` | Print text at current cursor position |
+| `LCD.CLEAR` | Clear LCD display |
+| `LCD.POS col, row` | Set cursor position |
+| `UDP.INIT port` | Initialize UDP socket on port |
+| `UDP.SEND host$, port, data$` | Send UDP datagram |
+| `UDP.RECEIVE var$` | Receive UDP datagram (blocking) |
 
 ## Project Structure
 
@@ -650,7 +685,19 @@ RustyBASIC/
 │   ├── neopixel.bas
 │   ├── deepsleep.bas
 │   ├── espnow.bas
-│   └── data_read.bas
+│   ├── data_read.bas
+│   ├── swap.bas
+│   ├── deffn.bas
+│   ├── print_using.bas
+│   ├── randomize.bas
+│   ├── string_funcs2.bas
+│   ├── oled.bas
+│   ├── lcd.bas
+│   ├── servo.bas
+│   ├── tone.bas
+│   ├── touch.bas
+│   ├── udp.bas
+│   └── temp.bas
 └── tests/
 ```
 
