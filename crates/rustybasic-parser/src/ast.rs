@@ -11,6 +11,12 @@ pub struct Program {
     pub functions: Vec<FunctionDef>,
     /// TYPE...END TYPE struct definitions.
     pub types: Vec<TypeDef>,
+    /// ENUM definitions.
+    pub enums: Vec<EnumDef>,
+    /// MODULE definitions.
+    pub modules: Vec<ModuleDef>,
+    /// STATE MACHINE definitions.
+    pub machines: Vec<MachineDef>,
 }
 
 // ── TYPE (struct) definitions ───────────────────────────
@@ -28,6 +34,60 @@ pub struct TypeField {
     pub name: String,
     pub field_type: QBType,
     pub span: Span,
+}
+
+// ── ENUM definitions ────────────────────────────────────
+
+/// ENUM Color ... END ENUM — enumeration type.
+#[derive(Debug, Clone)]
+pub struct EnumDef {
+    pub name: String,
+    pub members: Vec<EnumMember>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnumMember {
+    pub name: String,
+    pub value: i32,
+    pub span: Span,
+}
+
+// ── MODULE definitions ──────────────────────────────────
+
+/// MODULE Name ... END MODULE — namespace for grouping SUBs/FUNCTIONs.
+#[derive(Debug, Clone)]
+pub struct ModuleDef {
+    pub name: String,
+    pub subs: Vec<SubDef>,
+    pub functions: Vec<FunctionDef>,
+    pub span: Span,
+}
+
+// ── State Machine definitions ───────────────────────────
+
+/// MACHINE Name ... END MACHINE — state machine DSL.
+#[derive(Debug, Clone)]
+pub struct MachineDef {
+    pub name: String,
+    pub states: Vec<StateDef>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct StateDef {
+    pub name: String,
+    pub transitions: Vec<Transition>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum Transition {
+    OnEvent {
+        event_name: String,
+        target_state: String,
+        span: Span,
+    },
 }
 
 // ── Procedure definitions ───────────────────────────────
@@ -73,6 +133,7 @@ pub enum QBType {
     Double,          // DOUBLE or # suffix — f64 (we use f32 on ESP32)
     String,          // STRING or $ suffix — refcounted
     UserType(String), // TYPE name
+    FunctionPtr,     // FUNCTION pointer (for LAMBDA)
     Inferred,        // Not yet known (will be resolved by sema)
 }
 
@@ -91,6 +152,7 @@ impl From<&QBType> for VarType {
             QBType::Single | QBType::Double | QBType::Inferred => VarType::Float,
             QBType::String => VarType::String,
             QBType::UserType(_) => VarType::Integer, // pointer, treated as i32 for now
+            QBType::FunctionPtr => VarType::Integer, // pointer treated as i32 for now
         }
     }
 }
@@ -643,6 +705,59 @@ pub enum Statement {
         expr: Expr,
         span: Span,
     },
+
+    /// ASSERT condition [, message]
+    Assert {
+        condition: Expr,
+        message: Option<Expr>,
+        span: Span,
+    },
+    /// FOR EACH var IN array ... NEXT
+    ForEach {
+        var: String,
+        var_type: QBType,
+        array_name: String,
+        body: Vec<Statement>,
+        span: Span,
+    },
+    /// TRY ... CATCH var$ ... END TRY
+    TryCatch {
+        try_body: Vec<Statement>,
+        catch_var: String,
+        catch_body: Vec<Statement>,
+        span: Span,
+    },
+    /// TASK name, stack_size, priority ... END TASK
+    Task {
+        name: Expr,
+        stack_size: Expr,
+        priority: Expr,
+        body: Vec<Statement>,
+        span: Span,
+    },
+    /// ON GPIO.CHANGE pin GOSUB label
+    OnGpioChange {
+        pin: Expr,
+        target: String,
+        span: Span,
+    },
+    /// ON TIMER interval_ms GOSUB label
+    OnTimerEvent {
+        interval_ms: Expr,
+        target: String,
+        span: Span,
+    },
+    /// ON MQTT.MESSAGE GOSUB label
+    OnMqttMessage {
+        target: String,
+        span: Span,
+    },
+    /// MachineName.EVENT expr
+    MachineEvent {
+        machine_name: String,
+        event: Expr,
+        span: Span,
+    },
 }
 
 // ── DO...LOOP condition ─────────────────────────────────
@@ -740,6 +855,12 @@ pub enum Expr {
         indices: Vec<Expr>,
         span: Span,
     },
+    /// LAMBDA (params) => expr
+    Lambda {
+        params: Vec<(String, QBType)>,
+        body: Box<Expr>,
+        span: Span,
+    },
 }
 
 impl Expr {
@@ -753,7 +874,8 @@ impl Expr {
             | Expr::BinaryOp { span, .. }
             | Expr::UnaryOp { span, .. }
             | Expr::FnCall { span, .. }
-            | Expr::ArrayAccess { span, .. } => *span,
+            | Expr::ArrayAccess { span, .. }
+            | Expr::Lambda { span, .. } => *span,
         }
     }
 }

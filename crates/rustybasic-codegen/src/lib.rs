@@ -178,6 +178,22 @@ pub struct Codegen<'ctx> {
     rt_udp_send: Option<FunctionValue<'ctx>>,
     rt_udp_receive: Option<FunctionValue<'ctx>>,
 
+    // New language feature runtime functions
+    rt_assert_fail: Option<FunctionValue<'ctx>>,
+    rt_try_begin: Option<FunctionValue<'ctx>>,
+    rt_try_end: Option<FunctionValue<'ctx>>,
+    rt_throw: Option<FunctionValue<'ctx>>,
+    rt_get_error_message: Option<FunctionValue<'ctx>>,
+    rt_task_create: Option<FunctionValue<'ctx>>,
+    rt_on_gpio_change: Option<FunctionValue<'ctx>>,
+    rt_on_timer: Option<FunctionValue<'ctx>>,
+    rt_on_mqtt_message: Option<FunctionValue<'ctx>>,
+    rt_machine_create: Option<FunctionValue<'ctx>>,
+    rt_machine_add_state: Option<FunctionValue<'ctx>>,
+    rt_machine_add_transition: Option<FunctionValue<'ctx>>,
+    rt_machine_event: Option<FunctionValue<'ctx>>,
+    rt_machine_get_state: Option<FunctionValue<'ctx>>,
+
     // String built-in function declarations
     rt_fn_len: Option<FunctionValue<'ctx>>,
     rt_fn_asc: Option<FunctionValue<'ctx>>,
@@ -225,6 +241,13 @@ pub struct Codegen<'ctx> {
 
     // User-defined SUB/FUNCTION LLVM declarations
     user_functions: HashMap<String, FunctionValue<'ctx>>,
+
+    // Lambda and task naming counters
+    lambda_counter: u32,
+    task_counter: u32,
+
+    // Enum constant lookup
+    enums: HashMap<String, HashMap<String, i32>>,
 
     // Sema results
     sema: SemaResult,
@@ -347,6 +370,20 @@ impl<'ctx> Codegen<'ctx> {
             rt_udp_init: None,
             rt_udp_send: None,
             rt_udp_receive: None,
+            rt_assert_fail: None,
+            rt_try_begin: None,
+            rt_try_end: None,
+            rt_throw: None,
+            rt_get_error_message: None,
+            rt_task_create: None,
+            rt_on_gpio_change: None,
+            rt_on_timer: None,
+            rt_on_mqtt_message: None,
+            rt_machine_create: None,
+            rt_machine_add_state: None,
+            rt_machine_add_transition: None,
+            rt_machine_event: None,
+            rt_machine_get_state: None,
             rt_fn_len: None,
             rt_fn_asc: None,
             rt_fn_chr_s: None,
@@ -381,6 +418,9 @@ impl<'ctx> Codegen<'ctx> {
             current_exit_bb: None,
             label_bbs: HashMap::new(),
             user_functions: HashMap::new(),
+            lambda_counter: 0,
+            task_counter: 0,
+            enums: HashMap::new(),
             sema,
         };
         cg.declare_runtime_functions();
@@ -1143,6 +1183,114 @@ impl<'ctx> Codegen<'ctx> {
             ptr_t.fn_type(&[], false),
             None,
         ));
+
+        // ── Assert runtime ──
+        self.rt_assert_fail = Some(self.module.add_function(
+            "rb_assert_fail",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+
+        // ── TRY/CATCH runtime ──
+        self.rt_try_begin = Some(self.module.add_function(
+            "rb_try_begin",
+            i32_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_try_end = Some(self.module.add_function(
+            "rb_try_end",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_throw = Some(self.module.add_function(
+            "rb_throw",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_get_error_message = Some(self.module.add_function(
+            "rb_get_error_message",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+
+        // ── TASK runtime ──
+        self.rt_task_create = Some(self.module.add_function(
+            "rb_task_create",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),  // fn_ptr
+                    BasicMetadataTypeEnum::from(ptr_t),  // name string
+                    BasicMetadataTypeEnum::from(i32_t),  // stack_size
+                    BasicMetadataTypeEnum::from(i32_t),  // priority
+                ],
+                false,
+            ),
+            None,
+        ));
+
+        // ── EVENT runtime ──
+        self.rt_on_gpio_change = Some(self.module.add_function(
+            "rb_on_gpio_change",
+            void_t.fn_type(
+                &[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)],
+                false,
+            ),
+            None,
+        ));
+        self.rt_on_timer = Some(self.module.add_function(
+            "rb_on_timer",
+            void_t.fn_type(
+                &[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)],
+                false,
+            ),
+            None,
+        ));
+        self.rt_on_mqtt_message = Some(self.module.add_function(
+            "rb_on_mqtt_message",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+
+        // ── State Machine runtime ──
+        self.rt_machine_create = Some(self.module.add_function(
+            "rb_machine_create",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_machine_add_state = Some(self.module.add_function(
+            "rb_machine_add_state",
+            void_t.fn_type(
+                &[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)],
+                false,
+            ),
+            None,
+        ));
+        self.rt_machine_add_transition = Some(self.module.add_function(
+            "rb_machine_add_transition",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),  // machine handle
+                    BasicMetadataTypeEnum::from(ptr_t),  // from_state
+                    BasicMetadataTypeEnum::from(ptr_t),  // event_name
+                    BasicMetadataTypeEnum::from(ptr_t),  // to_state
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_machine_event = Some(self.module.add_function(
+            "rb_machine_event",
+            void_t.fn_type(
+                &[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)],
+                false,
+            ),
+            None,
+        ));
+        self.rt_machine_get_state = Some(self.module.add_function(
+            "rb_machine_get_state",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
     }
 
     fn qb_to_var(qb: &QBType) -> VarType {
@@ -1273,6 +1421,25 @@ impl<'ctx> Codegen<'ctx> {
             self.declare_user_function(fn_def)?;
         }
 
+        // Collect enum definitions for constant resolution
+        for enum_def in &program.enums {
+            let mut members = HashMap::new();
+            for member in &enum_def.members {
+                members.insert(member.name.clone(), member.value);
+            }
+            self.enums.insert(enum_def.name.clone(), members);
+        }
+
+        // Declare module SUBs/FUNCTIONs
+        for module in &program.modules {
+            for sub_def in &module.subs {
+                self.declare_user_sub(sub_def)?;
+            }
+            for fn_def in &module.functions {
+                self.declare_user_function(fn_def)?;
+            }
+        }
+
         // Create basic_program_entry: void basic_program_entry(void)
         let fn_type = self.context.void_type().fn_type(&[], false);
         let entry_fn = self
@@ -1308,6 +1475,48 @@ impl<'ctx> Codegen<'ctx> {
 
         // Collect labels and create basic blocks
         self.collect_labels(&program.body, entry_fn);
+
+        // Initialize state machines
+        for machine in &program.machines {
+            let name_str = self.builder.build_global_string_ptr(&machine.name, "machine_name")?;
+            let handle = self.builder.build_call(
+                self.rt_machine_create.unwrap(),
+                &[name_str.as_pointer_value().into()],
+                "machine_handle",
+            )?.try_as_basic_value().left().unwrap();
+            let handle_alloca = self.builder.build_alloca(self.i32_type, &format!("{}_handle", machine.name))?;
+            self.builder.build_store(handle_alloca, handle)?;
+            self.variables.insert(format!("{}.HANDLE", machine.name), (handle_alloca, VarType::Integer));
+
+            for state in &machine.states {
+                let state_name = self.builder.build_global_string_ptr(&state.name, "state_name")?;
+                self.builder.build_call(
+                    self.rt_machine_add_state.unwrap(),
+                    &[handle.into(), state_name.as_pointer_value().into()],
+                    "",
+                )?;
+
+                for transition in &state.transitions {
+                    match transition {
+                        rustybasic_parser::ast::Transition::OnEvent { event_name, target_state, .. } => {
+                            let from_str = self.builder.build_global_string_ptr(&state.name, "from_state")?;
+                            let event_str = self.builder.build_global_string_ptr(event_name, "event_name")?;
+                            let to_str = self.builder.build_global_string_ptr(target_state, "to_state")?;
+                            self.builder.build_call(
+                                self.rt_machine_add_transition.unwrap(),
+                                &[
+                                    handle.into(),
+                                    from_str.as_pointer_value().into(),
+                                    event_str.as_pointer_value().into(),
+                                    to_str.as_pointer_value().into(),
+                                ],
+                                "",
+                            )?;
+                        }
+                    }
+                }
+            }
+        }
 
         // GOSUB support
         if self.sema.has_gosub {
@@ -1371,6 +1580,16 @@ impl<'ctx> Codegen<'ctx> {
         // Compile FUNCTION bodies
         for fn_def in &program.functions {
             self.compile_function_body(fn_def)?;
+        }
+
+        // Compile module SUBs/FUNCTIONs
+        for module in &program.modules {
+            for sub_def in &module.subs {
+                self.compile_sub_body(sub_def)?;
+            }
+            for fn_def in &module.functions {
+                self.compile_function_body(fn_def)?;
+            }
         }
 
         Ok(())
@@ -3284,6 +3503,259 @@ impl<'ctx> Codegen<'ctx> {
                     self.builder.build_store(*alloca, result)?;
                 }
             }
+            Statement::Assert { condition, message, .. } => {
+                let cond_val = self.compile_condition(condition)?;
+                let ok_bb = self.context.append_basic_block(function, "assert_ok");
+                let fail_bb = self.context.append_basic_block(function, "assert_fail");
+                self.builder.build_conditional_branch(cond_val, ok_bb, fail_bb)?;
+
+                self.builder.position_at_end(fail_bb);
+                let msg_ptr = if let Some(msg_expr) = message {
+                    let msg = self.compile_expr(msg_expr, VarType::String)?;
+                    msg.into_pointer_value()
+                } else {
+                    let default_msg = self.builder.build_global_string_ptr("Assertion failed", "assert_msg")?;
+                    let result = self.builder.build_call(
+                        self.rt_string_alloc.unwrap(),
+                        &[default_msg.as_pointer_value().into()],
+                        "assert_str",
+                    )?.try_as_basic_value().left().unwrap();
+                    result.into_pointer_value()
+                };
+                self.builder.build_call(
+                    self.rt_assert_fail.unwrap(),
+                    &[msg_ptr.into(), self.i32_type.const_zero().into()],
+                    "",
+                )?;
+                self.builder.build_unreachable()?;
+
+                self.builder.position_at_end(ok_bb);
+            }
+            Statement::ForEach { var, var_type, array_name, body, .. } => {
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(var, vt)?;
+
+                if let Some(arr_info) = self.arrays.get(array_name) {
+                    let total_alloca = arr_info.total_size_alloca;
+                    let data_alloca = arr_info.data_ptr_alloca;
+                    let element_vt = arr_info.element_vt;
+
+                    let counter = self.builder.build_alloca(self.i32_type, "foreach_i")?;
+                    self.builder.build_store(counter, self.i32_type.const_zero())?;
+
+                    let cond_bb = self.context.append_basic_block(function, "foreach_cond");
+                    let body_bb = self.context.append_basic_block(function, "foreach_body");
+                    let end_bb = self.context.append_basic_block(function, "foreach_end");
+
+                    self.builder.build_unconditional_branch(cond_bb)?;
+                    self.builder.position_at_end(cond_bb);
+
+                    let i = self.builder.build_load(self.i32_type, counter, "i")?.into_int_value();
+                    let total = self.builder.build_load(self.i32_type, total_alloca, "total")?.into_int_value();
+                    let cmp = self.builder.build_int_compare(IntPredicate::SLT, i, total, "foreach_cmp")?;
+                    self.builder.build_conditional_branch(cmp, body_bb, end_bb)?;
+
+                    self.builder.position_at_end(body_bb);
+
+                    // Load element into loop var
+                    let data_ptr = self.builder.build_load(self.ptr_type, data_alloca, "data")?.into_pointer_value();
+                    let elem_llvm_type = self.var_llvm_type(element_vt);
+                    let elem_ptr = unsafe {
+                        self.builder.build_gep(elem_llvm_type, data_ptr, &[i], "elem_ptr")?
+                    };
+                    let elem_val = self.builder.build_load(elem_llvm_type, elem_ptr, "elem")?;
+                    let coerced = self.coerce_value(elem_val, element_vt, vt)?;
+                    if let Some((alloca, _)) = self.variables.get(var) {
+                        self.builder.build_store(*alloca, coerced)?;
+                    }
+
+                    self.for_exit_stack.push(end_bb);
+                    self.compile_body(body)?;
+                    self.for_exit_stack.pop();
+
+                    // i++
+                    if self.builder.get_insert_block().unwrap().get_terminator().is_none() {
+                        let i = self.builder.build_load(self.i32_type, counter, "i")?.into_int_value();
+                        let inc = self.builder.build_int_add(i, self.i32_type.const_int(1, false), "inc")?;
+                        self.builder.build_store(counter, inc)?;
+                        self.builder.build_unconditional_branch(cond_bb)?;
+                    }
+
+                    self.builder.position_at_end(end_bb);
+                }
+            }
+            Statement::TryCatch { try_body, catch_var, catch_body, .. } => {
+                let result = self.builder.build_call(
+                    self.rt_try_begin.unwrap(), &[], "try_result"
+                )?.try_as_basic_value().left().unwrap().into_int_value();
+
+                let try_bb = self.context.append_basic_block(function, "try_body");
+                let catch_bb = self.context.append_basic_block(function, "catch_body");
+                let merge_bb = self.context.append_basic_block(function, "try_merge");
+
+                let is_zero = self.builder.build_int_compare(
+                    IntPredicate::EQ, result, self.i32_type.const_zero(), "is_try"
+                )?;
+                self.builder.build_conditional_branch(is_zero, try_bb, catch_bb)?;
+
+                // Try body
+                self.builder.position_at_end(try_bb);
+                self.compile_body(try_body)?;
+                if self.builder.get_insert_block().unwrap().get_terminator().is_none() {
+                    self.builder.build_call(self.rt_try_end.unwrap(), &[], "")?;
+                    self.builder.build_unconditional_branch(merge_bb)?;
+                }
+
+                // Catch body
+                self.builder.position_at_end(catch_bb);
+                self.ensure_var(catch_var, VarType::String)?;
+                let err_msg = self.builder.build_call(
+                    self.rt_get_error_message.unwrap(), &[], "err_msg"
+                )?.try_as_basic_value().left().unwrap();
+                if let Some((alloca, _)) = self.variables.get(catch_var) {
+                    self.builder.build_store(*alloca, err_msg)?;
+                }
+                self.compile_body(catch_body)?;
+                if self.builder.get_insert_block().unwrap().get_terminator().is_none() {
+                    self.builder.build_call(self.rt_try_end.unwrap(), &[], "")?;
+                    self.builder.build_unconditional_branch(merge_bb)?;
+                }
+
+                self.builder.position_at_end(merge_bb);
+            }
+            Statement::Task { name, stack_size, priority, body, .. } => {
+                let task_id = self.task_counter;
+                self.task_counter += 1;
+
+                // Create task body function
+                let task_fn_name = format!("rb_task_body_{}", task_id);
+                let task_fn_type = self.context.void_type().fn_type(
+                    &[BasicMetadataTypeEnum::from(self.ptr_type)],
+                    false,
+                );
+                let task_fn = self.module.add_function(&task_fn_name, task_fn_type, None);
+                let task_entry_bb = self.context.append_basic_block(task_fn, "entry");
+
+                // Save state
+                let saved_function = self.current_function;
+                let saved_exit_bb = self.current_exit_bb;
+                let saved_vars = self.variables.clone();
+                let saved_labels = self.label_bbs.clone();
+                let saved_for_exit = self.for_exit_stack.clone();
+                let saved_do_exit = self.do_exit_stack.clone();
+
+                self.current_function = Some(task_fn);
+                self.variables = HashMap::new();
+                self.label_bbs = HashMap::new();
+                self.for_exit_stack = Vec::new();
+                self.do_exit_stack = Vec::new();
+
+                self.builder.position_at_end(task_entry_bb);
+                let task_exit_bb = self.context.append_basic_block(task_fn, "exit");
+                self.current_exit_bb = Some(task_exit_bb);
+
+                self.compile_body(body)?;
+
+                if self.builder.get_insert_block().unwrap().get_terminator().is_none() {
+                    self.builder.build_unconditional_branch(task_exit_bb)?;
+                }
+                self.builder.position_at_end(task_exit_bb);
+                self.builder.build_return(None)?;
+
+                // Restore state
+                self.current_function = saved_function;
+                self.current_exit_bb = saved_exit_bb;
+                self.variables = saved_vars;
+                self.label_bbs = saved_labels;
+                self.for_exit_stack = saved_for_exit;
+                self.do_exit_stack = saved_do_exit;
+
+                // Back in main function, call rt_task_create
+                let continue_bb = self.context.append_basic_block(function, "after_task");
+                self.builder.position_at_end(continue_bb);
+
+                let name_val = self.compile_expr(name, VarType::String)?.into_pointer_value();
+                let stack_val = self.compile_expr_as_i32(stack_size)?;
+                let prio_val = self.compile_expr_as_i32(priority)?;
+                let fn_ptr = task_fn.as_global_value().as_pointer_value();
+
+                self.builder.build_call(
+                    self.rt_task_create.unwrap(),
+                    &[fn_ptr.into(), name_val.into(), stack_val.into(), prio_val.into()],
+                    "",
+                )?;
+            }
+            Statement::OnGpioChange { pin, target, .. } => {
+                let pin_val = self.compile_expr_as_i32(pin)?;
+                if let Some(&_target_bb) = self.label_bbs.get(target) {
+                    // Create a wrapper function that branches to the target label
+                    let wrapper_name = format!("rb_gpio_handler_{}", target);
+                    let wrapper_type = self.context.void_type().fn_type(&[], false);
+                    let wrapper_fn = self.module.add_function(&wrapper_name, wrapper_type, None);
+                    let wrapper_bb = self.context.append_basic_block(wrapper_fn, "entry");
+
+                    let saved_pos = self.builder.get_insert_block().unwrap();
+                    self.builder.position_at_end(wrapper_bb);
+                    self.builder.build_return(None)?;
+                    self.builder.position_at_end(saved_pos);
+
+                    let fn_ptr = wrapper_fn.as_global_value().as_pointer_value();
+                    self.builder.build_call(
+                        self.rt_on_gpio_change.unwrap(),
+                        &[pin_val.into(), fn_ptr.into()],
+                        "",
+                    )?;
+                }
+            }
+            Statement::OnTimerEvent { interval_ms, target, .. } => {
+                let ms_val = self.compile_expr_as_i32(interval_ms)?;
+                let wrapper_name = format!("rb_timer_handler_{}", target);
+                let wrapper_type = self.context.void_type().fn_type(&[], false);
+                let wrapper_fn = self.module.add_function(&wrapper_name, wrapper_type, None);
+                let wrapper_bb = self.context.append_basic_block(wrapper_fn, "entry");
+
+                let saved_pos = self.builder.get_insert_block().unwrap();
+                self.builder.position_at_end(wrapper_bb);
+                self.builder.build_return(None)?;
+                self.builder.position_at_end(saved_pos);
+
+                let fn_ptr = wrapper_fn.as_global_value().as_pointer_value();
+                self.builder.build_call(
+                    self.rt_on_timer.unwrap(),
+                    &[ms_val.into(), fn_ptr.into()],
+                    "",
+                )?;
+            }
+            Statement::OnMqttMessage { target, .. } => {
+                let wrapper_name = format!("rb_mqtt_handler_{}", target);
+                let wrapper_type = self.context.void_type().fn_type(&[], false);
+                let wrapper_fn = self.module.add_function(&wrapper_name, wrapper_type, None);
+                let wrapper_bb = self.context.append_basic_block(wrapper_fn, "entry");
+
+                let saved_pos = self.builder.get_insert_block().unwrap();
+                self.builder.position_at_end(wrapper_bb);
+                self.builder.build_return(None)?;
+                self.builder.position_at_end(saved_pos);
+
+                let fn_ptr = wrapper_fn.as_global_value().as_pointer_value();
+                self.builder.build_call(
+                    self.rt_on_mqtt_message.unwrap(),
+                    &[fn_ptr.into()],
+                    "",
+                )?;
+            }
+            Statement::MachineEvent { machine_name, event, .. } => {
+                let handle_name = format!("{}.HANDLE", machine_name);
+                if let Some((alloca, _)) = self.variables.get(&handle_name).copied() {
+                    let handle = self.builder.build_load(self.i32_type, alloca, "mach_handle")?.into_int_value();
+                    let event_val = self.compile_expr(event, VarType::String)?.into_pointer_value();
+                    self.builder.build_call(
+                        self.rt_machine_event.unwrap(),
+                        &[handle.into(), event_val.into()],
+                        "",
+                    )?;
+                }
+            }
         }
         Ok(())
     }
@@ -3540,6 +4012,17 @@ impl<'ctx> Codegen<'ctx> {
             Expr::Variable {
                 name, var_type, ..
             } => {
+                // Check for enum constant (e.g., "COLOR.RED")
+                if let Some(dot_pos) = name.find('.') {
+                    let enum_name = &name[..dot_pos];
+                    let member_name = &name[dot_pos + 1..];
+                    if let Some(members) = self.enums.get(enum_name) {
+                        if let Some(&value) = members.get(member_name) {
+                            let val = self.i32_type.const_int(value as u64, true);
+                            return self.coerce_value(val.as_basic_value_enum(), VarType::Integer, target_type);
+                        }
+                    }
+                }
                 if let Some((alloca, stored_vt)) = self.variables.get(name).copied() {
                     let llvm_type = self.var_llvm_type(stored_vt);
                     let val = self.builder.build_load(llvm_type, alloca, name)?;
@@ -3808,6 +4291,63 @@ impl<'ctx> Codegen<'ctx> {
                 } else {
                     Ok(self.i32_type.const_zero().as_basic_value_enum())
                 }
+            }
+            Expr::Lambda { params, body, .. } => {
+                let lambda_id = self.lambda_counter;
+                self.lambda_counter += 1;
+
+                // Build param types
+                let mut param_types: Vec<BasicMetadataTypeEnum> = Vec::new();
+                for (_, pt) in params {
+                    let vt = Self::qb_to_var(pt);
+                    match vt {
+                        VarType::Integer => param_types.push(self.i32_type.into()),
+                        VarType::Float => param_types.push(self.f32_type.into()),
+                        VarType::String => param_types.push(self.ptr_type.into()),
+                    }
+                }
+
+                // Infer return type from body
+                let ret_vt = self.infer_expr_type(body);
+                let ret_type = self.var_llvm_type(ret_vt);
+                let fn_type = ret_type.fn_type(&param_types, false);
+                let fn_name = format!("rb_lambda_{}", lambda_id);
+                let lambda_fn = self.module.add_function(&fn_name, fn_type, None);
+                let lambda_bb = self.context.append_basic_block(lambda_fn, "entry");
+
+                // Save state
+                let saved_function = self.current_function;
+                let saved_exit_bb = self.current_exit_bb;
+                let saved_vars = self.variables.clone();
+
+                self.current_function = Some(lambda_fn);
+                self.variables = HashMap::new();
+
+                self.builder.position_at_end(lambda_bb);
+
+                // Bind parameters
+                for (i, (pname, ptype)) in params.iter().enumerate() {
+                    let vt = Self::qb_to_var(ptype);
+                    let llvm_type = self.var_llvm_type(vt);
+                    let alloca = self.builder.build_alloca(llvm_type, pname)?;
+                    let param_val = lambda_fn.get_nth_param(i as u32).unwrap();
+                    self.builder.build_store(alloca, param_val)?;
+                    self.variables.insert(pname.clone(), (alloca, vt));
+                }
+
+                // Compile body expression and return it
+                let result = self.compile_expr(body, ret_vt)?;
+                self.builder.build_return(Some(&result))?;
+
+                // Restore state
+                self.current_function = saved_function;
+                self.current_exit_bb = saved_exit_bb;
+                self.variables = saved_vars;
+
+                // Return function pointer
+                let continue_bb = self.context.append_basic_block(saved_function.unwrap(), "after_lambda");
+                self.builder.position_at_end(continue_bb);
+                Ok(lambda_fn.as_global_value().as_pointer_value().as_basic_value_enum())
             }
         }
     }
@@ -4083,6 +4623,7 @@ impl<'ctx> Codegen<'ctx> {
                 }
             }
             Expr::ArrayAccess { var_type, .. } => Self::qb_to_var(var_type),
+            Expr::Lambda { .. } => VarType::Integer, // function pointer is integer-like
         }
     }
 

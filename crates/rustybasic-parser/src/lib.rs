@@ -31,6 +31,9 @@ impl Parser {
         let mut subs = Vec::new();
         let mut functions = Vec::new();
         let mut types = Vec::new();
+        let mut enums = Vec::new();
+        let mut modules = Vec::new();
+        let mut machines = Vec::new();
 
         self.skip_blank_lines();
 
@@ -49,6 +52,15 @@ impl Parser {
                 Some(TokenKind::Ident(ref name)) if name == "TYPE" => {
                     types.push(self.parse_type_def()?);
                 }
+                Some(TokenKind::Enum) => {
+                    enums.push(self.parse_enum_def()?);
+                }
+                Some(TokenKind::Module) => {
+                    modules.push(self.parse_module_def()?);
+                }
+                Some(TokenKind::Machine) => {
+                    machines.push(self.parse_machine_def()?);
+                }
                 _ => {
                     if let Some(stmt) = self.parse_top_level_statement()? {
                         body.push(stmt);
@@ -63,6 +75,9 @@ impl Parser {
             subs,
             functions,
             types,
+            enums,
+            modules,
+            machines,
         })
     }
 
@@ -231,6 +246,10 @@ impl Parser {
             Some(TokenKind::StringType) => {
                 self.advance();
                 Ok(QBType::String)
+            }
+            Some(TokenKind::Function) => {
+                self.advance();
+                Ok(QBType::FunctionPtr)
             }
             Some(TokenKind::Ident(_)) => {
                 let name = self.expect_ident_name()?;
@@ -420,6 +439,9 @@ impl Parser {
             Some(TokenKind::UdpInit) => self.parse_udp_init(),
             Some(TokenKind::UdpSend) => self.parse_udp_send(),
             Some(TokenKind::UdpReceive) => self.parse_udp_receive(),
+            Some(TokenKind::Assert) => self.parse_assert(),
+            Some(TokenKind::Try) => self.parse_try_catch(),
+            Some(TokenKind::Task) => self.parse_task_stmt(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -501,6 +523,18 @@ impl Parser {
             return Ok(Statement::CallSub {
                 name,
                 args: indices,
+                span,
+            });
+        }
+
+        // Check for MachineName.EVENT expr pattern
+        if name.ends_with(".EVENT") {
+            let machine_name = name[..name.len() - 6].to_string(); // strip ".EVENT"
+            let event = self.parse_expr()?;
+            let span = start.merge(self.prev_span());
+            return Ok(Statement::MachineEvent {
+                machine_name,
+                event,
                 span,
             });
         }
@@ -741,6 +775,12 @@ impl Parser {
     fn parse_for(&mut self) -> ParseResult<Statement> {
         let start = self.current_span();
         self.advance(); // FOR
+
+        // Check for FOR EACH
+        if self.eat(TokenKind::Each) {
+            return self.parse_for_each(start);
+        }
+
         let var = self.expect_ident_name()?;
         self.expect(TokenKind::Eq)?;
         let from = self.parse_expr()?;
@@ -912,36 +952,6 @@ impl Parser {
             Ok(CaseTest::Range(expr, end))
         } else {
             Ok(CaseTest::Value(expr))
-        }
-    }
-
-    fn expect_comparison_op(&mut self) -> ParseResult<BinOp> {
-        match self.peek_kind() {
-            Some(TokenKind::Eq) => {
-                self.advance();
-                Ok(BinOp::Eq)
-            }
-            Some(TokenKind::Neq) => {
-                self.advance();
-                Ok(BinOp::Neq)
-            }
-            Some(TokenKind::Lt) => {
-                self.advance();
-                Ok(BinOp::Lt)
-            }
-            Some(TokenKind::Gt) => {
-                self.advance();
-                Ok(BinOp::Gt)
-            }
-            Some(TokenKind::Le) => {
-                self.advance();
-                Ok(BinOp::Le)
-            }
-            Some(TokenKind::Ge) => {
-                self.advance();
-                Ok(BinOp::Ge)
-            }
-            _ => Err(self.error("expected comparison operator")),
         }
     }
 
@@ -1752,10 +1762,47 @@ impl Parser {
 
     // ── Classic BASIC extensions ──────────────────────────────
 
-    /// Parse ON ... GOTO / ON ... GOSUB / ON ERROR GOTO
+    /// Parse ON ... GOTO / ON ... GOSUB / ON ERROR GOTO / ON GPIO.CHANGE / ON TIMER / ON MQTT.MESSAGE
     fn parse_on(&mut self) -> ParseResult<Statement> {
         let start = self.current_span();
         self.advance(); // ON
+
+        // ON GPIO.CHANGE pin GOSUB label
+        if self.check_ident("GPIO.CHANGE") {
+            self.advance(); // GPIO.CHANGE
+            let pin = self.parse_expr()?;
+            self.expect(TokenKind::Gosub)?;
+            let target = self.expect_label_target()?;
+            return Ok(Statement::OnGpioChange {
+                pin,
+                target,
+                span: start.merge(self.prev_span()),
+            });
+        }
+
+        // ON TIMER interval_ms GOSUB label
+        if self.check_ident("TIMER") {
+            self.advance(); // TIMER
+            let interval_ms = self.parse_expr()?;
+            self.expect(TokenKind::Gosub)?;
+            let target = self.expect_label_target()?;
+            return Ok(Statement::OnTimerEvent {
+                interval_ms,
+                target,
+                span: start.merge(self.prev_span()),
+            });
+        }
+
+        // ON MQTT.MESSAGE GOSUB label
+        if self.check_ident("MQTT.MESSAGE") {
+            self.advance(); // MQTT.MESSAGE
+            self.expect(TokenKind::Gosub)?;
+            let target = self.expect_label_target()?;
+            return Ok(Statement::OnMqttMessage {
+                target,
+                span: start.merge(self.prev_span()),
+            });
+        }
 
         // ON ERROR GOTO label
         if self.eat(TokenKind::Error) {
@@ -2115,6 +2162,277 @@ impl Parser {
         })
     }
 
+    // ── New language features ──────────────────────────────
+
+    fn parse_assert(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // ASSERT
+        let condition = self.parse_expr()?;
+        let message = if self.eat(TokenKind::Comma) {
+            Some(self.parse_expr()?)
+        } else {
+            None
+        };
+        Ok(Statement::Assert {
+            condition,
+            message,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_for_each(&mut self, start: Span) -> ParseResult<Statement> {
+        let (var, var_type) = self.expect_variable()?;
+        self.expect(TokenKind::In)?;
+        let array_name = self.expect_ident_name()?;
+        self.eat_newline();
+        let body = self.parse_block(&[TokenKind::Next])?;
+        self.expect(TokenKind::Next)?;
+        // Optional variable name after NEXT
+        if matches!(self.peek_kind(), Some(TokenKind::Ident(_))) {
+            self.advance();
+        }
+        Ok(Statement::ForEach {
+            var,
+            var_type,
+            array_name,
+            body,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_try_catch(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // TRY
+        self.eat_newline();
+
+        // Parse try body until CATCH
+        let mut try_body = Vec::new();
+        loop {
+            self.skip_blank_lines();
+            if self.at_end() || matches!(self.peek_kind(), Some(TokenKind::Catch)) {
+                break;
+            }
+            let stmt = self.parse_statement()?;
+            try_body.push(stmt);
+            self.eat_newline();
+        }
+
+        self.expect(TokenKind::Catch)?;
+        let catch_var = self.expect_ident_name()?;
+        self.eat_newline();
+
+        // Parse catch body until END TRY
+        let mut catch_body = Vec::new();
+        loop {
+            self.skip_blank_lines();
+            if self.at_end() || self.check_end_keyword_ahead(TokenKind::Try) {
+                break;
+            }
+            let stmt = self.parse_statement()?;
+            catch_body.push(stmt);
+            self.eat_newline();
+        }
+
+        // Expect END TRY
+        self.expect_end_keyword(TokenKind::Try, "END TRY")?;
+
+        Ok(Statement::TryCatch {
+            try_body,
+            catch_var,
+            catch_body,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_task_stmt(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance(); // TASK
+        let name = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let stack_size = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let priority = self.parse_expr()?;
+        self.eat_newline();
+
+        // Parse body until END TASK
+        let mut body = Vec::new();
+        loop {
+            self.skip_blank_lines();
+            if self.at_end() || self.check_end_keyword_ahead(TokenKind::Task) {
+                break;
+            }
+            let stmt = self.parse_statement()?;
+            body.push(stmt);
+            self.eat_newline();
+        }
+
+        self.expect_end_keyword(TokenKind::Task, "END TASK")?;
+
+        Ok(Statement::Task {
+            name,
+            stack_size,
+            priority,
+            body,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_enum_def(&mut self) -> ParseResult<EnumDef> {
+        let start = self.current_span();
+        self.advance(); // ENUM
+        let name = self.expect_ident_name()?;
+        self.eat_newline();
+
+        let mut members = Vec::new();
+        let mut next_value: i32 = 0;
+        loop {
+            self.skip_blank_lines();
+            if self.at_end() || self.check_end_keyword_ahead(TokenKind::Enum) {
+                break;
+            }
+            let member_start = self.current_span();
+            let member_name = self.expect_ident_name()?;
+            let value = if self.eat(TokenKind::Eq) {
+                match self.peek_kind() {
+                    Some(TokenKind::IntLiteral(v)) => {
+                        let v = *v;
+                        self.advance();
+                        next_value = v + 1;
+                        v
+                    }
+                    _ => return Err(self.error("expected integer value for enum member")),
+                }
+            } else {
+                let v = next_value;
+                next_value += 1;
+                v
+            };
+            members.push(EnumMember {
+                name: member_name,
+                value,
+                span: member_start.merge(self.prev_span()),
+            });
+            self.eat_newline();
+        }
+
+        self.expect_end_keyword(TokenKind::Enum, "END ENUM")?;
+
+        Ok(EnumDef {
+            name,
+            members,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_machine_def(&mut self) -> ParseResult<MachineDef> {
+        let start = self.current_span();
+        self.advance(); // MACHINE
+        let name = self.expect_ident_name()?;
+        self.eat_newline();
+
+        let mut states = Vec::new();
+        loop {
+            self.skip_blank_lines();
+            if self.at_end() || self.check_end_keyword_ahead(TokenKind::Machine) {
+                break;
+            }
+            if matches!(self.peek_kind(), Some(TokenKind::Ident(s)) if s == "STATE") {
+                self.advance(); // consume STATE ident
+                let state_start = self.prev_span();
+                let state_name = self.expect_ident_name()?;
+                self.eat_newline();
+
+                let mut transitions = Vec::new();
+                loop {
+                    self.skip_blank_lines();
+                    if self.at_end()
+                        || matches!(self.peek_kind(), Some(TokenKind::Ident(s)) if s == "STATE")
+                        || self.check_end_keyword_ahead(TokenKind::Machine)
+                        || self.check_end_ident("STATE")
+                    {
+                        break;
+                    }
+                    // ON event_name GOTO target_state
+                    if self.eat(TokenKind::On) {
+                        let event_name = self.expect_ident_name()?;
+                        self.expect(TokenKind::Goto)?;
+                        let target_state = self.expect_ident_name()?;
+                        let t_span = self.prev_span();
+                        transitions.push(Transition::OnEvent {
+                            event_name,
+                            target_state,
+                            span: t_span,
+                        });
+                        self.eat_newline();
+                    } else {
+                        return Err(self.error("expected ON transition in STATE block"));
+                    }
+                }
+
+                // Optional END STATE
+                if self.check_end_ident("STATE") {
+                    self.advance(); // END
+                    self.advance(); // STATE (Ident)
+                    self.eat_newline();
+                }
+
+                states.push(StateDef {
+                    name: state_name,
+                    transitions,
+                    span: state_start.merge(self.prev_span()),
+                });
+            } else {
+                return Err(self.error("expected STATE inside MACHINE"));
+            }
+        }
+
+        self.expect_end_keyword(TokenKind::Machine, "END MACHINE")?;
+
+        Ok(MachineDef {
+            name,
+            states,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_module_def(&mut self) -> ParseResult<ModuleDef> {
+        let start = self.current_span();
+        self.advance(); // MODULE
+        let mod_name = self.expect_ident_name()?;
+        self.eat_newline();
+
+        let mut subs = Vec::new();
+        let mut functions = Vec::new();
+        loop {
+            self.skip_blank_lines();
+            if self.at_end() || self.check_end_keyword_ahead(TokenKind::Module) {
+                break;
+            }
+            match self.peek_kind().cloned() {
+                Some(TokenKind::Sub) => {
+                    let mut sub = self.parse_sub_def()?;
+                    sub.name = format!("{}.{}", mod_name, sub.name);
+                    subs.push(sub);
+                }
+                Some(TokenKind::Function) => {
+                    let mut func = self.parse_function_def()?;
+                    func.name = format!("{}.{}", mod_name, func.name);
+                    functions.push(func);
+                }
+                _ => return Err(self.error("expected SUB or FUNCTION inside MODULE")),
+            }
+        }
+
+        self.expect_end_keyword(TokenKind::Module, "END MODULE")?;
+
+        Ok(ModuleDef {
+            name: mod_name,
+            subs,
+            functions,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
     // ── Block parsing ───────────────────────────────────────
 
     /// Parse statements until one of the direct terminator tokens is found.
@@ -2250,6 +2568,109 @@ impl Parser {
                 let name = name.clone();
                 self.advance();
                 self.parse_ident_expr(name, QBType::Double, span)
+            }
+            Some(TokenKind::InterpolatedString(template)) => {
+                let template = template.clone();
+                self.advance();
+                // Desugar $"Hello {name}, you are {age} years old" into
+                // "Hello " + STR$(name) + ", you are " + STR$(age) + " years old"
+                let mut parts: Vec<Expr> = Vec::new();
+                let mut current = String::new();
+                let mut chars = template.chars().peekable();
+                while let Some(ch) = chars.next() {
+                    if ch == '{' {
+                        // Flush literal part
+                        if !current.is_empty() {
+                            parts.push(Expr::StringLiteral {
+                                value: current.clone(),
+                                span,
+                            });
+                            current.clear();
+                        }
+                        // Collect expression text until '}'
+                        let mut expr_text = String::new();
+                        while let Some(&c) = chars.peek() {
+                            if c == '}' {
+                                chars.next();
+                                break;
+                            }
+                            expr_text.push(c);
+                            chars.next();
+                        }
+                        // Parse the expression
+                        let expr_tokens = rustybasic_lexer::tokenize(&expr_text)
+                            .map_err(|e| ParseError {
+                                span,
+                                message: format!("error in interpolation: {}", e),
+                            })?;
+                        let mut sub_parser = Parser::new(expr_tokens);
+                        let expr = sub_parser.parse_expr()?;
+                        // Wrap in STR$ if needed
+                        parts.push(Expr::FnCall {
+                            name: "STR$".to_string(),
+                            args: vec![expr],
+                            span,
+                        });
+                    } else {
+                        current.push(ch);
+                    }
+                }
+                if !current.is_empty() {
+                    parts.push(Expr::StringLiteral {
+                        value: current,
+                        span,
+                    });
+                }
+                // Chain parts with BinaryOp::Add
+                if parts.is_empty() {
+                    Ok(Expr::StringLiteral {
+                        value: String::new(),
+                        span,
+                    })
+                } else {
+                    let mut result = parts.remove(0);
+                    for part in parts {
+                        let merged = result.span().merge(part.span());
+                        result = Expr::BinaryOp {
+                            op: BinOp::Add,
+                            left: Box::new(result),
+                            right: Box::new(part),
+                            span: merged,
+                        };
+                    }
+                    Ok(result)
+                }
+            }
+            Some(TokenKind::Lambda) => {
+                self.advance(); // LAMBDA
+                self.expect(TokenKind::LParen)?;
+                let mut params = Vec::new();
+                if !self.check(TokenKind::RParen) {
+                    let (pname, ptype) = self.expect_variable()?;
+                    let ptype = if self.eat(TokenKind::As) {
+                        self.parse_type_name()?
+                    } else {
+                        ptype
+                    };
+                    params.push((pname, ptype));
+                    while self.eat(TokenKind::Comma) {
+                        let (pname, ptype) = self.expect_variable()?;
+                        let ptype = if self.eat(TokenKind::As) {
+                            self.parse_type_name()?
+                        } else {
+                            ptype
+                        };
+                        params.push((pname, ptype));
+                    }
+                }
+                self.expect(TokenKind::RParen)?;
+                self.expect(TokenKind::FatArrow)?;
+                let body = self.parse_expr()?;
+                Ok(Expr::Lambda {
+                    params,
+                    body: Box::new(body),
+                    span: span.merge(self.prev_span()),
+                })
             }
             _ => Err(self.error("expected expression")),
         }
@@ -2702,6 +3123,12 @@ mod tests {
             assert_eq!(name, "ARR");
             assert_eq!(indices.len(), 1);
         }
+    }
+
+    #[test]
+    fn test_try_catch() {
+        let prog = parse_str("TRY\nPRINT 1\nCATCH err\nPRINT 2\nEND TRY").unwrap();
+        assert!(matches!(&prog.body[0], Statement::TryCatch { .. }));
     }
 
     #[test]

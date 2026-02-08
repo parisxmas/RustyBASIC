@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use rustybasic_common::{FileId, Span};
 use rustybasic_parser::ast::*;
+use rustybasic_parser::ast::Transition;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
@@ -54,6 +55,7 @@ pub struct SemaResult {
     pub types: HashMap<String, TypeInfo>,
     pub constants: HashSet<String>,
     pub data_items: Vec<DataItem>,
+    pub enums: HashMap<String, HashMap<String, i32>>,
     pub errors: Vec<SemaError>,
 }
 
@@ -98,6 +100,7 @@ pub struct SemanticAnalyzer {
     types: HashMap<String, TypeInfo>,
     constants: HashSet<String>,
     data_items: Vec<DataItem>,
+    enums: HashMap<String, HashMap<String, i32>>,
     scope_stack: Vec<ScopeKind>,
     errors: Vec<SemaError>,
 }
@@ -115,6 +118,7 @@ impl SemanticAnalyzer {
             types: HashMap::new(),
             constants: HashSet::new(),
             data_items: Vec::new(),
+            enums: HashMap::new(),
             scope_stack: vec![ScopeKind::TopLevel],
             errors: Vec::new(),
         }
@@ -129,12 +133,57 @@ impl SemanticAnalyzer {
         // Pass 2: Validate TYPE field references (UserType fields must reference known types)
         self.validate_type_field_references();
 
+        // Collect enums
+        for e in &program.enums {
+            let mut members = HashMap::new();
+            for m in &e.members {
+                members.insert(m.name.clone(), m.value);
+            }
+            self.enums.insert(e.name.clone(), members);
+        }
+
         // Pass 3: Collect SUB/FUNCTION signatures
         for sub_def in &program.subs {
             self.collect_sub_def(sub_def);
         }
         for func_def in &program.functions {
             self.collect_function_def(func_def);
+        }
+
+        // Collect module members (prefixed names)
+        for module in &program.modules {
+            for sub in &module.subs {
+                self.subs.insert(sub.name.clone(), SubInfo {
+                    params: sub.params.iter().map(|p| p.param_type.clone()).collect(),
+                    span: sub.span,
+                });
+            }
+            for func in &module.functions {
+                self.functions.insert(func.name.clone(), FunctionInfo {
+                    params: func.params.iter().map(|p| p.param_type.clone()).collect(),
+                    return_type: func.return_type.clone(),
+                    span: func.span,
+                });
+            }
+        }
+
+        // Validate state machines
+        for machine in &program.machines {
+            let state_names: Vec<_> = machine.states.iter().map(|s| s.name.clone()).collect();
+            for state in &machine.states {
+                for transition in &state.transitions {
+                    match transition {
+                        Transition::OnEvent { target_state, span, .. } => {
+                            if !state_names.contains(target_state) {
+                                self.errors.push(SemaError {
+                                    span: *span,
+                                    message: format!("unknown state '{}' in machine '{}'", target_state, machine.name),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Pass 4: Collect labels from all bodies
@@ -181,6 +230,7 @@ impl SemanticAnalyzer {
             types: self.types,
             constants: self.constants,
             data_items: self.data_items,
+            enums: self.enums,
             errors: self.errors,
         }
     }
@@ -1103,6 +1153,54 @@ impl SemanticAnalyzer {
                     });
                 }
             }
+            Statement::Assert { condition, message, .. } => {
+                self.check_expr(condition);
+                if let Some(msg) = message {
+                    self.check_expr(msg);
+                }
+            }
+            Statement::ForEach { var, var_type, array_name, body, span } => {
+                self.scope_stack.push(ScopeKind::ForLoop);
+                self.register_var(var, var_type);
+                // Check array exists
+                if !self.variables.contains_key(array_name) {
+                    self.errors.push(SemaError {
+                        span: *span,
+                        message: format!("undeclared array '{}'", array_name),
+                    });
+                }
+                for s in body {
+                    self.check_statement(s);
+                }
+                self.scope_stack.pop();
+            }
+            Statement::TryCatch { try_body, catch_var, catch_body, .. } => {
+                for s in try_body {
+                    self.check_statement(s);
+                }
+                self.register_var(catch_var, &QBType::String);
+                for s in catch_body {
+                    self.check_statement(s);
+                }
+            }
+            Statement::Task { name, stack_size, priority, body, .. } => {
+                self.check_expr(name);
+                self.check_expr(stack_size);
+                self.check_expr(priority);
+                for s in body {
+                    self.check_statement(s);
+                }
+            }
+            Statement::OnGpioChange { pin, .. } => {
+                self.check_expr(pin);
+            }
+            Statement::OnTimerEvent { interval_ms, .. } => {
+                self.check_expr(interval_ms);
+            }
+            Statement::OnMqttMessage { .. } => {}
+            Statement::MachineEvent { event, .. } => {
+                self.check_expr(event);
+            }
         }
     }
 
@@ -1116,7 +1214,21 @@ impl SemanticAnalyzer {
             Expr::Variable {
                 name, var_type, span, ..
             } => {
-                self.reference_var(name, var_type, *span);
+                // Check if this is an enum member access (e.g., "COLOR.RED")
+                let is_enum_member = if let Some(dot_pos) = name.find('.') {
+                    let enum_name = &name[..dot_pos];
+                    let member_name = &name[dot_pos + 1..];
+                    if let Some(members) = self.enums.get(enum_name) {
+                        members.contains_key(member_name)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+                if !is_enum_member {
+                    self.reference_var(name, var_type, *span);
+                }
                 Some(var_type.clone())
             }
             Expr::FieldAccess {
@@ -1282,6 +1394,10 @@ impl SemanticAnalyzer {
                     });
                 }
                 Some(var_type.clone())
+            }
+            Expr::Lambda { params: _, body, .. } => {
+                self.check_expr(body);
+                Some(QBType::Inferred)
             }
         }
     }

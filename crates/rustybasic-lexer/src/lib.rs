@@ -277,6 +277,31 @@ pub enum TokenKind {
     #[regex(r"(?i:UDP\.RECEIVE)")]
     UdpReceive,
 
+    // ── New language features ─────────────────────────────
+    #[regex(r"(?i:ASSERT)")]
+    Assert,
+    #[regex(r"(?i:ENUM)")]
+    Enum,
+    #[regex(r"(?i:EACH)")]
+    Each,
+    #[regex(r"(?i:IN)")]
+    In,
+    #[regex(r"(?i:TRY)")]
+    Try,
+    #[regex(r"(?i:CATCH)")]
+    Catch,
+    #[regex(r"(?i:LAMBDA)")]
+    Lambda,
+    #[regex(r"(?i:TASK)")]
+    Task,
+    #[regex(r"(?i:MACHINE)")]
+    Machine,
+    // STATE is not a keyword — it's handled as Ident("STATE") inside MACHINE blocks
+    #[regex(r"(?i:MODULE)")]
+    Module,
+    #[token("=>")]
+    FatArrow,
+
     // ── Literals ────────────────────────────────────────────
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
     #[regex(r"\.[0-9]+([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
@@ -290,6 +315,12 @@ pub enum TokenKind {
         Some(s[1..s.len()-1].to_string())
     })]
     StringLiteral(String),
+
+    #[regex(r#"\$"[^"]*""#, |lex| {
+        let s = lex.slice();
+        Some(s[2..s.len()-1].to_string())
+    })]
+    InterpolatedString(String),
 
     // ── Identifiers ─────────────────────────────────────────
     // String variable/function (ends with $)
@@ -481,6 +512,18 @@ impl std::fmt::Display for TokenKind {
             TokenKind::UdpInit => write!(f, "UDP.INIT"),
             TokenKind::UdpSend => write!(f, "UDP.SEND"),
             TokenKind::UdpReceive => write!(f, "UDP.RECEIVE"),
+            TokenKind::Assert => write!(f, "ASSERT"),
+            TokenKind::Enum => write!(f, "ENUM"),
+            TokenKind::Each => write!(f, "EACH"),
+            TokenKind::In => write!(f, "IN"),
+            TokenKind::Try => write!(f, "TRY"),
+            TokenKind::Catch => write!(f, "CATCH"),
+            TokenKind::Lambda => write!(f, "LAMBDA"),
+            TokenKind::Task => write!(f, "TASK"),
+            TokenKind::Machine => write!(f, "MACHINE"),
+            TokenKind::Module => write!(f, "MODULE"),
+            TokenKind::FatArrow => write!(f, "=>"),
+            TokenKind::InterpolatedString(v) => write!(f, "$\"{v}\""),
             TokenKind::FloatLiteral(v) => write!(f, "{v}"),
             TokenKind::IntLiteral(v) => write!(f, "{v}"),
             TokenKind::StringLiteral(v) => write!(f, "\"{v}\""),
@@ -681,5 +724,22 @@ mod tests {
         assert!(matches!(&tokens[1].kind, TokenKind::Ident(s) if s == "X"));
         assert!(matches!(tokens[2].kind, TokenKind::As));
         assert!(matches!(tokens[3].kind, TokenKind::IntegerType));
+    }
+
+    #[test]
+    fn test_new_keywords() {
+        let tokens = tokenize("TRY CATCH ASSERT ENUM EACH IN LAMBDA TASK MACHINE STATE MODULE").unwrap();
+        assert!(matches!(tokens[0].kind, TokenKind::Try), "expected Try, got {:?}", tokens[0].kind);
+        assert!(matches!(tokens[1].kind, TokenKind::Catch), "expected Catch, got {:?}", tokens[1].kind);
+        assert!(matches!(tokens[2].kind, TokenKind::Assert), "expected Assert, got {:?}", tokens[2].kind);
+        assert!(matches!(tokens[3].kind, TokenKind::Enum), "expected Enum, got {:?}", tokens[3].kind);
+        assert!(matches!(tokens[4].kind, TokenKind::Each), "expected Each, got {:?}", tokens[4].kind);
+        assert!(matches!(tokens[5].kind, TokenKind::In), "expected In, got {:?}", tokens[5].kind);
+        assert!(matches!(tokens[6].kind, TokenKind::Lambda), "expected Lambda, got {:?}", tokens[6].kind);
+        assert!(matches!(tokens[7].kind, TokenKind::Task), "expected Task, got {:?}", tokens[7].kind);
+        assert!(matches!(tokens[8].kind, TokenKind::Machine), "expected Machine, got {:?}", tokens[8].kind);
+        // STATE is a contextual keyword — tokenized as Ident("STATE")
+        assert!(matches!(&tokens[9].kind, TokenKind::Ident(s) if s == "STATE"), "expected Ident(STATE), got {:?}", tokens[9].kind);
+        assert!(matches!(tokens[10].kind, TokenKind::Module), "expected Module, got {:?}", tokens[10].kind);
     }
 }
