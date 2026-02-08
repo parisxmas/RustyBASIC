@@ -277,6 +277,60 @@ pub enum TokenKind {
     #[regex(r"(?i:UDP\.RECEIVE)")]
     UdpReceive,
 
+    // ── New hardware keywords (ESP32 extensions, phase 2) ─
+    #[regex(r"(?i:NTP\.SYNC)")]
+    NtpSync,
+    #[regex(r"(?i:NTP\.TIME\$)")]
+    NtpTime,
+    #[regex(r"(?i:NTP\.EPOCH)")]
+    NtpEpoch,
+    #[regex(r"(?i:FILE\.OPEN)")]
+    FileOpen,
+    #[regex(r"(?i:FILE\.WRITE)")]
+    FileWrite,
+    #[regex(r"(?i:FILE\.READ\$)")]
+    FileReadStr,
+    #[regex(r"(?i:FILE\.CLOSE)")]
+    FileClose,
+    #[regex(r"(?i:FILE\.DELETE)")]
+    FileDelete,
+    #[regex(r"(?i:FILE\.EXISTS)")]
+    FileExists,
+    #[regex(r"(?i:WS\.CONNECT)")]
+    WsConnect,
+    #[regex(r"(?i:WS\.SEND)")]
+    WsSend,
+    #[regex(r"(?i:WS\.RECEIVE\$)")]
+    WsReceiveStr,
+    #[regex(r"(?i:WS\.CLOSE)")]
+    WsClose,
+    #[regex(r"(?i:TCP\.LISTEN)")]
+    TcpListen,
+    #[regex(r"(?i:TCP\.ACCEPT)")]
+    TcpAccept,
+    #[regex(r"(?i:TCP\.SEND)")]
+    TcpSend,
+    #[regex(r"(?i:TCP\.RECEIVE\$)")]
+    TcpReceiveStr,
+    #[regex(r"(?i:TCP\.CLOSE)")]
+    TcpClose,
+    #[regex(r"(?i:WDT\.ENABLE)")]
+    WdtEnable,
+    #[regex(r"(?i:WDT\.FEED)")]
+    WdtFeed,
+    #[regex(r"(?i:WDT\.DISABLE)")]
+    WdtDisable,
+    #[regex(r"(?i:HTTPS\.GET\$)")]
+    HttpsGet,
+    #[regex(r"(?i:HTTPS\.POST\$)")]
+    HttpsPost,
+    #[regex(r"(?i:I2S\.INIT)")]
+    I2sInit,
+    #[regex(r"(?i:I2S\.WRITE)")]
+    I2sWrite,
+    #[regex(r"(?i:I2S\.STOP)")]
+    I2sStop,
+
     // ── New language features ─────────────────────────────
     #[regex(r"(?i:ASSERT)")]
     Assert,
@@ -512,6 +566,32 @@ impl std::fmt::Display for TokenKind {
             TokenKind::UdpInit => write!(f, "UDP.INIT"),
             TokenKind::UdpSend => write!(f, "UDP.SEND"),
             TokenKind::UdpReceive => write!(f, "UDP.RECEIVE"),
+            TokenKind::NtpSync => write!(f, "NTP.SYNC"),
+            TokenKind::NtpTime => write!(f, "NTP.TIME$"),
+            TokenKind::NtpEpoch => write!(f, "NTP.EPOCH"),
+            TokenKind::FileOpen => write!(f, "FILE.OPEN"),
+            TokenKind::FileWrite => write!(f, "FILE.WRITE"),
+            TokenKind::FileReadStr => write!(f, "FILE.READ$"),
+            TokenKind::FileClose => write!(f, "FILE.CLOSE"),
+            TokenKind::FileDelete => write!(f, "FILE.DELETE"),
+            TokenKind::FileExists => write!(f, "FILE.EXISTS"),
+            TokenKind::WsConnect => write!(f, "WS.CONNECT"),
+            TokenKind::WsSend => write!(f, "WS.SEND"),
+            TokenKind::WsReceiveStr => write!(f, "WS.RECEIVE$"),
+            TokenKind::WsClose => write!(f, "WS.CLOSE"),
+            TokenKind::TcpListen => write!(f, "TCP.LISTEN"),
+            TokenKind::TcpAccept => write!(f, "TCP.ACCEPT"),
+            TokenKind::TcpSend => write!(f, "TCP.SEND"),
+            TokenKind::TcpReceiveStr => write!(f, "TCP.RECEIVE$"),
+            TokenKind::TcpClose => write!(f, "TCP.CLOSE"),
+            TokenKind::WdtEnable => write!(f, "WDT.ENABLE"),
+            TokenKind::WdtFeed => write!(f, "WDT.FEED"),
+            TokenKind::WdtDisable => write!(f, "WDT.DISABLE"),
+            TokenKind::HttpsGet => write!(f, "HTTPS.GET$"),
+            TokenKind::HttpsPost => write!(f, "HTTPS.POST$"),
+            TokenKind::I2sInit => write!(f, "I2S.INIT"),
+            TokenKind::I2sWrite => write!(f, "I2S.WRITE"),
+            TokenKind::I2sStop => write!(f, "I2S.STOP"),
             TokenKind::Assert => write!(f, "ASSERT"),
             TokenKind::Enum => write!(f, "ENUM"),
             TokenKind::Each => write!(f, "EACH"),

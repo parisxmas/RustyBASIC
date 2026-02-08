@@ -442,6 +442,32 @@ impl Parser {
             Some(TokenKind::Assert) => self.parse_assert(),
             Some(TokenKind::Try) => self.parse_try_catch(),
             Some(TokenKind::Task) => self.parse_task_stmt(),
+            Some(TokenKind::NtpSync) => self.parse_ntp_sync(),
+            Some(TokenKind::NtpTime) => self.parse_ntp_time(),
+            Some(TokenKind::NtpEpoch) => self.parse_ntp_epoch(),
+            Some(TokenKind::FileOpen) => self.parse_file_open(),
+            Some(TokenKind::FileWrite) => self.parse_file_write(),
+            Some(TokenKind::FileReadStr) => self.parse_file_read_str(),
+            Some(TokenKind::FileClose) => self.parse_file_close(),
+            Some(TokenKind::FileDelete) => self.parse_file_delete(),
+            Some(TokenKind::FileExists) => self.parse_file_exists(),
+            Some(TokenKind::WsConnect) => self.parse_ws_connect(),
+            Some(TokenKind::WsSend) => self.parse_ws_send(),
+            Some(TokenKind::WsReceiveStr) => self.parse_ws_receive_str(),
+            Some(TokenKind::WsClose) => self.parse_ws_close(),
+            Some(TokenKind::TcpListen) => self.parse_tcp_listen(),
+            Some(TokenKind::TcpAccept) => self.parse_tcp_accept(),
+            Some(TokenKind::TcpSend) => self.parse_tcp_send(),
+            Some(TokenKind::TcpReceiveStr) => self.parse_tcp_receive_str(),
+            Some(TokenKind::TcpClose) => self.parse_tcp_close(),
+            Some(TokenKind::WdtEnable) => self.parse_wdt_enable(),
+            Some(TokenKind::WdtFeed) => self.parse_wdt_feed(),
+            Some(TokenKind::WdtDisable) => self.parse_wdt_disable(),
+            Some(TokenKind::HttpsGet) => self.parse_https_get(),
+            Some(TokenKind::HttpsPost) => self.parse_https_post(),
+            Some(TokenKind::I2sInit) => self.parse_i2s_init(),
+            Some(TokenKind::I2sWrite) => self.parse_i2s_write(),
+            Some(TokenKind::I2sStop) => self.parse_i2s_stop(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -2160,6 +2186,198 @@ impl Parser {
             var_type,
             span: start.merge(self.prev_span()),
         })
+    }
+
+    // ── New hardware parse functions (phase 2) ──────────
+
+    fn parse_ntp_sync(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let server = self.parse_expr()?;
+        Ok(Statement::NtpSync { server, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_ntp_time(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::NtpTime { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_ntp_epoch(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::NtpEpoch { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_file_open(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let path = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let mode = self.parse_expr()?;
+        Ok(Statement::FileOpen { path, mode, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_file_write(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let data = self.parse_expr()?;
+        Ok(Statement::FileWrite { data, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_file_read_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::FileReadStr { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_file_close(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::FileClose { span })
+    }
+
+    fn parse_file_delete(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let path = self.parse_expr()?;
+        Ok(Statement::FileDelete { path, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_file_exists(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let path = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::FileExists { path, target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_ws_connect(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let url = self.parse_expr()?;
+        Ok(Statement::WsConnect { url, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_ws_send(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let data = self.parse_expr()?;
+        Ok(Statement::WsSend { data, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_ws_receive_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::WsReceiveStr { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_ws_close(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::WsClose { span })
+    }
+
+    fn parse_tcp_listen(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let port = self.parse_expr()?;
+        Ok(Statement::TcpListen { port, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_tcp_accept(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::TcpAccept { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_tcp_send(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let data = self.parse_expr()?;
+        Ok(Statement::TcpSend { data, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_tcp_receive_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::TcpReceiveStr { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_tcp_close(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::TcpClose { span })
+    }
+
+    fn parse_wdt_enable(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let timeout_ms = self.parse_expr()?;
+        Ok(Statement::WdtEnable { timeout_ms, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_wdt_feed(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::WdtFeed { span })
+    }
+
+    fn parse_wdt_disable(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::WdtDisable { span })
+    }
+
+    fn parse_https_get(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let url = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::HttpsGet { url, target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_https_post(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let url = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let body = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::HttpsPost { url, body, target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_i2s_init(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let rate = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let bits = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let channels = self.parse_expr()?;
+        Ok(Statement::I2sInit { rate, bits, channels, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_i2s_write(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let data = self.parse_expr()?;
+        Ok(Statement::I2sWrite { data, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_i2s_stop(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::I2sStop { span })
     }
 
     // ── New language features ──────────────────────────────

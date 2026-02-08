@@ -616,6 +616,95 @@ PRINT "Exited at count ="; count
 END
 ```
 
+### NTP Clock
+
+```basic
+WIFI.CONNECT "MySSID", "MyPassword"
+DELAY 3000
+NTP.SYNC "pool.ntp.org"
+NTP.TIME$ timeStr$
+PRINT "Current time: "; timeStr$
+NTP.EPOCH epoch%
+PRINT "Unix epoch: "; epoch%
+```
+
+### File System (LittleFS)
+
+```basic
+FILE.OPEN "test.txt", "w"
+FILE.WRITE "Hello from RustyBASIC!"
+FILE.CLOSE
+FILE.EXISTS "test.txt", found%
+PRINT "File exists: "; found%
+FILE.OPEN "test.txt", "r"
+FILE.READ$ content$
+FILE.CLOSE
+PRINT "Read: "; content$
+FILE.DELETE "test.txt"
+```
+
+### WebSocket Client
+
+```basic
+WIFI.CONNECT "MySSID", "MyPassword"
+DELAY 3000
+WS.CONNECT "ws://echo.websocket.org"
+WS.SEND "Hello WebSocket!"
+DELAY 1000
+WS.RECEIVE$ msg$
+PRINT "Received: "; msg$
+WS.CLOSE
+```
+
+### TCP Server
+
+```basic
+WIFI.CONNECT "MySSID", "MyPassword"
+DELAY 3000
+TCP.LISTEN 8080
+PRINT "Listening on port 8080..."
+TCP.ACCEPT client%
+PRINT "Client connected: "; client%
+TCP.RECEIVE$ request$
+PRINT "Got: "; request$
+TCP.SEND "HTTP/1.0 200 OK\r\n\r\nHello from RustyBASIC!\r\n"
+TCP.CLOSE
+```
+
+### Watchdog Timer
+
+```basic
+WDT.ENABLE 5000
+PRINT "Watchdog enabled (5s timeout)"
+FOR i = 1 TO 10
+    PRINT "Working... "; i
+    WDT.FEED
+    DELAY 1000
+NEXT i
+WDT.DISABLE
+PRINT "Watchdog disabled"
+```
+
+### HTTPS Client
+
+```basic
+WIFI.CONNECT "MySSID", "MyPassword"
+DELAY 3000
+HTTPS.GET$ "https://httpbin.org/get", response$
+PRINT "GET response: "; response$
+```
+
+### I2S Audio Output
+
+```basic
+I2S.INIT 44100, 16, 2
+PRINT "I2S initialized at 44100 Hz, 16-bit, stereo"
+I2S.WRITE "audio data placeholder"
+DELAY 1000
+I2S.STOP
+PRINT "I2S stopped"
+```
+
 ## Language Reference
 
 ### Types
@@ -816,6 +905,32 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `UDP.INIT port` | Initialize UDP socket on port |
 | `UDP.SEND host$, port, data$` | Send UDP datagram |
 | `UDP.RECEIVE var$` | Receive UDP datagram (blocking) |
+| `NTP.SYNC server$` | Synchronize clock with NTP server |
+| `NTP.TIME$ var$` | Get current date/time as formatted string |
+| `NTP.EPOCH var%` | Get current Unix epoch timestamp |
+| `FILE.OPEN path$, mode$` | Open file on LittleFS (`"r"`, `"w"`, `"a"`) |
+| `FILE.WRITE data$` | Write string to open file |
+| `FILE.READ$ var$` | Read string from open file |
+| `FILE.CLOSE` | Close current file |
+| `FILE.DELETE path$` | Delete file from filesystem |
+| `FILE.EXISTS path$, var%` | Check if file exists (-1 = true, 0 = false) |
+| `WS.CONNECT url$` | Connect to WebSocket server |
+| `WS.SEND data$` | Send text message via WebSocket |
+| `WS.RECEIVE$ var$` | Receive WebSocket message |
+| `WS.CLOSE` | Close WebSocket connection |
+| `TCP.LISTEN port` | Start TCP server on port |
+| `TCP.ACCEPT var%` | Accept incoming TCP connection |
+| `TCP.SEND data$` | Send data on TCP connection |
+| `TCP.RECEIVE$ var$` | Receive data from TCP connection |
+| `TCP.CLOSE` | Close TCP server and client sockets |
+| `WDT.ENABLE timeout_ms` | Enable watchdog timer with timeout |
+| `WDT.FEED` | Reset (feed) the watchdog timer |
+| `WDT.DISABLE` | Disable watchdog timer |
+| `HTTPS.GET$ url$, var$` | HTTPS GET request (TLS) |
+| `HTTPS.POST$ url$, body$, var$` | HTTPS POST request (TLS) |
+| `I2S.INIT rate, bits, channels` | Initialize I2S audio output |
+| `I2S.WRITE data$` | Write audio data to I2S bus |
+| `I2S.STOP` | Stop and release I2S driver |
 
 ## Project Structure
 
@@ -884,7 +999,14 @@ RustyBASIC/
 │   ├── task.bas
 │   ├── events.bas
 │   ├── state_machine.bas
-│   └── module.bas
+│   ├── module.bas
+│   ├── ntp.bas
+│   ├── filesystem.bas
+│   ├── websocket.bas
+│   ├── tcp_server.bas
+│   ├── watchdog.bas
+│   ├── https.bas
+│   └── i2s_audio.bas
 └── tests/
 ```
 

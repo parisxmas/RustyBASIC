@@ -1201,6 +1201,80 @@ impl SemanticAnalyzer {
             Statement::MachineEvent { event, .. } => {
                 self.check_expr(event);
             }
+            // ── New hardware statements (phase 2) ──
+            Statement::NtpSync { server, .. } => {
+                self.check_expr(server);
+            }
+            Statement::NtpTime { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::NtpEpoch { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::FileOpen { path, mode, .. } => {
+                self.check_expr(path);
+                self.check_expr(mode);
+            }
+            Statement::FileWrite { data, .. } => {
+                self.check_expr(data);
+            }
+            Statement::FileReadStr { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::FileClose { .. } => {}
+            Statement::FileDelete { path, .. } => {
+                self.check_expr(path);
+            }
+            Statement::FileExists { path, target, var_type, span } => {
+                self.check_expr(path);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::WsConnect { url, .. } => {
+                self.check_expr(url);
+            }
+            Statement::WsSend { data, .. } => {
+                self.check_expr(data);
+            }
+            Statement::WsReceiveStr { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::WsClose { .. } => {}
+            Statement::TcpListen { port, .. } => {
+                self.check_expr(port);
+            }
+            Statement::TcpAccept { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::TcpSend { data, .. } => {
+                self.check_expr(data);
+            }
+            Statement::TcpReceiveStr { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::TcpClose { .. } => {}
+            Statement::WdtEnable { timeout_ms, .. } => {
+                self.check_expr(timeout_ms);
+            }
+            Statement::WdtFeed { .. } => {}
+            Statement::WdtDisable { .. } => {}
+            Statement::HttpsGet { url, target, var_type, span } => {
+                self.check_expr(url);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::HttpsPost { url, body, target, var_type, span } => {
+                self.check_expr(url);
+                self.check_expr(body);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::I2sInit { rate, bits, channels, .. } => {
+                self.check_expr(rate);
+                self.check_expr(bits);
+                self.check_expr(channels);
+            }
+            Statement::I2sWrite { data, .. } => {
+                self.check_expr(data);
+            }
+            Statement::I2sStop { .. } => {}
         }
     }
 

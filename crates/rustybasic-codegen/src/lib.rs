@@ -194,6 +194,34 @@ pub struct Codegen<'ctx> {
     rt_machine_event: Option<FunctionValue<'ctx>>,
     rt_machine_get_state: Option<FunctionValue<'ctx>>,
 
+    // New hardware extensions (phase 2)
+    rt_ntp_sync: Option<FunctionValue<'ctx>>,
+    rt_ntp_time: Option<FunctionValue<'ctx>>,
+    rt_ntp_epoch: Option<FunctionValue<'ctx>>,
+    rt_file_open: Option<FunctionValue<'ctx>>,
+    rt_file_write: Option<FunctionValue<'ctx>>,
+    rt_file_read: Option<FunctionValue<'ctx>>,
+    rt_file_close: Option<FunctionValue<'ctx>>,
+    rt_file_delete: Option<FunctionValue<'ctx>>,
+    rt_file_exists: Option<FunctionValue<'ctx>>,
+    rt_ws_connect: Option<FunctionValue<'ctx>>,
+    rt_ws_send: Option<FunctionValue<'ctx>>,
+    rt_ws_receive: Option<FunctionValue<'ctx>>,
+    rt_ws_close: Option<FunctionValue<'ctx>>,
+    rt_tcp_listen: Option<FunctionValue<'ctx>>,
+    rt_tcp_accept: Option<FunctionValue<'ctx>>,
+    rt_tcp_send: Option<FunctionValue<'ctx>>,
+    rt_tcp_receive: Option<FunctionValue<'ctx>>,
+    rt_tcp_close: Option<FunctionValue<'ctx>>,
+    rt_wdt_enable: Option<FunctionValue<'ctx>>,
+    rt_wdt_feed: Option<FunctionValue<'ctx>>,
+    rt_wdt_disable: Option<FunctionValue<'ctx>>,
+    rt_https_get: Option<FunctionValue<'ctx>>,
+    rt_https_post: Option<FunctionValue<'ctx>>,
+    rt_i2s_init: Option<FunctionValue<'ctx>>,
+    rt_i2s_write: Option<FunctionValue<'ctx>>,
+    rt_i2s_stop: Option<FunctionValue<'ctx>>,
+
     // String built-in function declarations
     rt_fn_len: Option<FunctionValue<'ctx>>,
     rt_fn_asc: Option<FunctionValue<'ctx>>,
@@ -384,6 +412,32 @@ impl<'ctx> Codegen<'ctx> {
             rt_machine_add_transition: None,
             rt_machine_event: None,
             rt_machine_get_state: None,
+            rt_ntp_sync: None,
+            rt_ntp_time: None,
+            rt_ntp_epoch: None,
+            rt_file_open: None,
+            rt_file_write: None,
+            rt_file_read: None,
+            rt_file_close: None,
+            rt_file_delete: None,
+            rt_file_exists: None,
+            rt_ws_connect: None,
+            rt_ws_send: None,
+            rt_ws_receive: None,
+            rt_ws_close: None,
+            rt_tcp_listen: None,
+            rt_tcp_accept: None,
+            rt_tcp_send: None,
+            rt_tcp_receive: None,
+            rt_tcp_close: None,
+            rt_wdt_enable: None,
+            rt_wdt_feed: None,
+            rt_wdt_disable: None,
+            rt_https_get: None,
+            rt_https_post: None,
+            rt_i2s_init: None,
+            rt_i2s_write: None,
+            rt_i2s_stop: None,
             rt_fn_len: None,
             rt_fn_asc: None,
             rt_fn_chr_s: None,
@@ -1289,6 +1343,137 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_machine_get_state = Some(self.module.add_function(
             "rb_machine_get_state",
             ptr_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        // ── New hardware extensions (phase 2) ──
+        self.rt_ntp_sync = Some(self.module.add_function(
+            "rb_ntp_sync",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_ntp_time = Some(self.module.add_function(
+            "rb_ntp_time",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_ntp_epoch = Some(self.module.add_function(
+            "rb_ntp_epoch",
+            i32_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_file_open = Some(self.module.add_function(
+            "rb_file_open",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_file_write = Some(self.module.add_function(
+            "rb_file_write",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_file_read = Some(self.module.add_function(
+            "rb_file_read",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_file_close = Some(self.module.add_function(
+            "rb_file_close",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_file_delete = Some(self.module.add_function(
+            "rb_file_delete",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_file_exists = Some(self.module.add_function(
+            "rb_file_exists",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_ws_connect = Some(self.module.add_function(
+            "rb_ws_connect",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_ws_send = Some(self.module.add_function(
+            "rb_ws_send",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_ws_receive = Some(self.module.add_function(
+            "rb_ws_receive",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_ws_close = Some(self.module.add_function(
+            "rb_ws_close",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_tcp_listen = Some(self.module.add_function(
+            "rb_tcp_listen",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_tcp_accept = Some(self.module.add_function(
+            "rb_tcp_accept",
+            i32_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_tcp_send = Some(self.module.add_function(
+            "rb_tcp_send",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_tcp_receive = Some(self.module.add_function(
+            "rb_tcp_receive",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_tcp_close = Some(self.module.add_function(
+            "rb_tcp_close",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_wdt_enable = Some(self.module.add_function(
+            "rb_wdt_enable",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_wdt_feed = Some(self.module.add_function(
+            "rb_wdt_feed",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_wdt_disable = Some(self.module.add_function(
+            "rb_wdt_disable",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_https_get = Some(self.module.add_function(
+            "rb_https_get",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_https_post = Some(self.module.add_function(
+            "rb_https_post",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_i2s_init = Some(self.module.add_function(
+            "rb_i2s_init",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_i2s_write = Some(self.module.add_function(
+            "rb_i2s_write",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_i2s_stop = Some(self.module.add_function(
+            "rb_i2s_stop",
+            void_t.fn_type(&[], false),
             None,
         ));
     }
@@ -3755,6 +3940,161 @@ impl<'ctx> Codegen<'ctx> {
                         "",
                     )?;
                 }
+            }
+            // ── New hardware compile arms (phase 2) ──
+            Statement::NtpSync { server, .. } => {
+                let s = self.compile_expr(server, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_ntp_sync.unwrap(), &[s.into()], "")?;
+            }
+            Statement::NtpTime { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_ntp_time.unwrap(), &[], "ntp_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::NtpEpoch { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_ntp_epoch.unwrap(), &[], "epoch_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::FileOpen { path, mode, .. } => {
+                let p = self.compile_expr(path, VarType::String)?.into_pointer_value();
+                let m = self.compile_expr(mode, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_file_open.unwrap(), &[p.into(), m.into()], "")?;
+            }
+            Statement::FileWrite { data, .. } => {
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_file_write.unwrap(), &[d.into()], "")?;
+            }
+            Statement::FileReadStr { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_file_read.unwrap(), &[], "file_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::FileClose { .. } => {
+                self.builder.build_call(self.rt_file_close.unwrap(), &[], "")?;
+            }
+            Statement::FileDelete { path, .. } => {
+                let p = self.compile_expr(path, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_file_delete.unwrap(), &[p.into()], "")?;
+            }
+            Statement::FileExists { path, target, var_type, .. } => {
+                let p = self.compile_expr(path, VarType::String)?.into_pointer_value();
+                let result = self.builder.build_call(self.rt_file_exists.unwrap(), &[p.into()], "exists_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::WsConnect { url, .. } => {
+                let u = self.compile_expr(url, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_ws_connect.unwrap(), &[u.into()], "")?;
+            }
+            Statement::WsSend { data, .. } => {
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_ws_send.unwrap(), &[d.into()], "")?;
+            }
+            Statement::WsReceiveStr { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_ws_receive.unwrap(), &[], "ws_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::WsClose { .. } => {
+                self.builder.build_call(self.rt_ws_close.unwrap(), &[], "")?;
+            }
+            Statement::TcpListen { port, .. } => {
+                let p = self.compile_expr_as_i32(port)?;
+                self.builder.build_call(self.rt_tcp_listen.unwrap(), &[BasicMetadataValueEnum::from(p)], "")?;
+            }
+            Statement::TcpAccept { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_tcp_accept.unwrap(), &[], "tcp_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::TcpSend { data, .. } => {
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_tcp_send.unwrap(), &[d.into()], "")?;
+            }
+            Statement::TcpReceiveStr { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_tcp_receive.unwrap(), &[], "tcp_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::TcpClose { .. } => {
+                self.builder.build_call(self.rt_tcp_close.unwrap(), &[], "")?;
+            }
+            Statement::WdtEnable { timeout_ms, .. } => {
+                let ms = self.compile_expr_as_i32(timeout_ms)?;
+                self.builder.build_call(self.rt_wdt_enable.unwrap(), &[BasicMetadataValueEnum::from(ms)], "")?;
+            }
+            Statement::WdtFeed { .. } => {
+                self.builder.build_call(self.rt_wdt_feed.unwrap(), &[], "")?;
+            }
+            Statement::WdtDisable { .. } => {
+                self.builder.build_call(self.rt_wdt_disable.unwrap(), &[], "")?;
+            }
+            Statement::HttpsGet { url, target, var_type, .. } => {
+                let u = self.compile_expr(url, VarType::String)?.into_pointer_value();
+                let result = self.builder.build_call(self.rt_https_get.unwrap(), &[u.into()], "https_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::HttpsPost { url, body, target, var_type, .. } => {
+                let u = self.compile_expr(url, VarType::String)?.into_pointer_value();
+                let b = self.compile_expr(body, VarType::String)?.into_pointer_value();
+                let result = self.builder.build_call(self.rt_https_post.unwrap(), &[u.into(), b.into()], "https_val")?
+                    .try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::I2sInit { rate, bits, channels, .. } => {
+                let r = self.compile_expr_as_i32(rate)?;
+                let b = self.compile_expr_as_i32(bits)?;
+                let c = self.compile_expr_as_i32(channels)?;
+                self.builder.build_call(
+                    self.rt_i2s_init.unwrap(),
+                    &[BasicMetadataValueEnum::from(r), BasicMetadataValueEnum::from(b), BasicMetadataValueEnum::from(c)],
+                    "",
+                )?;
+            }
+            Statement::I2sWrite { data, .. } => {
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_i2s_write.unwrap(), &[d.into()], "")?;
+            }
+            Statement::I2sStop { .. } => {
+                self.builder.build_call(self.rt_i2s_stop.unwrap(), &[], "")?;
             }
         }
         Ok(())

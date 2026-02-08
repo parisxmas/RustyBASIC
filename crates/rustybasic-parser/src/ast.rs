@@ -697,6 +697,41 @@ pub enum Statement {
         span: Span,
     },
 
+    // ── New hardware statements (ESP32 extensions, phase 2) ──
+    // NTP
+    NtpSync { server: Expr, span: Span },
+    NtpTime { target: String, var_type: QBType, span: Span },
+    NtpEpoch { target: String, var_type: QBType, span: Span },
+    // File System
+    FileOpen { path: Expr, mode: Expr, span: Span },
+    FileWrite { data: Expr, span: Span },
+    FileReadStr { target: String, var_type: QBType, span: Span },
+    FileClose { span: Span },
+    FileDelete { path: Expr, span: Span },
+    FileExists { path: Expr, target: String, var_type: QBType, span: Span },
+    // WebSocket
+    WsConnect { url: Expr, span: Span },
+    WsSend { data: Expr, span: Span },
+    WsReceiveStr { target: String, var_type: QBType, span: Span },
+    WsClose { span: Span },
+    // TCP
+    TcpListen { port: Expr, span: Span },
+    TcpAccept { target: String, var_type: QBType, span: Span },
+    TcpSend { data: Expr, span: Span },
+    TcpReceiveStr { target: String, var_type: QBType, span: Span },
+    TcpClose { span: Span },
+    // Watchdog
+    WdtEnable { timeout_ms: Expr, span: Span },
+    WdtFeed { span: Span },
+    WdtDisable { span: Span },
+    // HTTPS
+    HttpsGet { url: Expr, target: String, var_type: QBType, span: Span },
+    HttpsPost { url: Expr, body: Expr, target: String, var_type: QBType, span: Span },
+    // I2S
+    I2sInit { rate: Expr, bits: Expr, channels: Expr, span: Span },
+    I2sWrite { data: Expr, span: Span },
+    I2sStop { span: Span },
+
     /// Array element assignment: arr(i, j) = expr
     ArrayAssign {
         name: String,
