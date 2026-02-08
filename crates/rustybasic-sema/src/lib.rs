@@ -1070,6 +1070,8 @@ impl SemanticAnalyzer {
             | "SCREEN" | "PEEK" | "INP" | "VARPTR" | "SADD" | "FRE" => {
                 QBType::Integer
             }
+            // VAL returns Single (numeric from string)
+            "VAL" => QBType::Single,
             // Most math functions return Single
             _ => QBType::Single,
         }

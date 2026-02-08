@@ -481,6 +481,23 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `INPUT "prompt"; var` | Read user input |
 | `LINE INPUT "prompt"; var$` | Read entire line |
 
+### String Functions
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `LEN(s$)` | Integer | String length |
+| `ASC(s$)` | Integer | ASCII code of first character |
+| `CHR$(n)` | String | Single-character string from ASCII code |
+| `LEFT$(s$, n)` | String | First n characters |
+| `RIGHT$(s$, n)` | String | Last n characters |
+| `MID$(s$, start, len)` | String | Substring (1-based start) |
+| `INSTR(s$, find$)` | Integer | Position of find in s (1-based, 0 if not found) |
+| `STR$(n)` | String | Number to string |
+| `VAL(s$)` | Single | String to number |
+| `UCASE$(s$)` | String | Uppercase |
+| `LCASE$(s$)` | String | Lowercase |
+| `TRIM$(s$)` | String | Strip leading/trailing whitespace |
+
 ### Hardware (ESP32-C3)
 
 | Statement | Description |
@@ -528,7 +545,8 @@ RustyBASIC/
 │   ├── wifi_disconnect.bas
 │   ├── wifi_scan.bas
 │   ├── include_main.bas
-│   └── include_lib.bas
+│   ├── include_lib.bas
+│   └── string_funcs.bas
 └── tests/
 ```
 

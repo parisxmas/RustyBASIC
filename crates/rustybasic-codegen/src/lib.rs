@@ -110,6 +110,20 @@ pub struct Codegen<'ctx> {
     rt_array_bounds_check: Option<FunctionValue<'ctx>>,
     rt_array_check_dim_size: Option<FunctionValue<'ctx>>,
 
+    // String built-in function declarations
+    rt_fn_len: Option<FunctionValue<'ctx>>,
+    rt_fn_asc: Option<FunctionValue<'ctx>>,
+    rt_fn_chr_s: Option<FunctionValue<'ctx>>,
+    rt_fn_left_s: Option<FunctionValue<'ctx>>,
+    rt_fn_right_s: Option<FunctionValue<'ctx>>,
+    rt_fn_mid_s: Option<FunctionValue<'ctx>>,
+    rt_fn_instr: Option<FunctionValue<'ctx>>,
+    rt_fn_str_s: Option<FunctionValue<'ctx>>,
+    rt_fn_val: Option<FunctionValue<'ctx>>,
+    rt_fn_ucase_s: Option<FunctionValue<'ctx>>,
+    rt_fn_lcase_s: Option<FunctionValue<'ctx>>,
+    rt_fn_trim_s: Option<FunctionValue<'ctx>>,
+
     // GOSUB support
     gosub_return_var: Option<PointerValue<'ctx>>,
     gosub_dispatch_bb: Option<inkwell::basic_block::BasicBlock<'ctx>>,
@@ -186,6 +200,18 @@ impl<'ctx> Codegen<'ctx> {
             rt_array_free: None,
             rt_array_bounds_check: None,
             rt_array_check_dim_size: None,
+            rt_fn_len: None,
+            rt_fn_asc: None,
+            rt_fn_chr_s: None,
+            rt_fn_left_s: None,
+            rt_fn_right_s: None,
+            rt_fn_mid_s: None,
+            rt_fn_instr: None,
+            rt_fn_str_s: None,
+            rt_fn_val: None,
+            rt_fn_ucase_s: None,
+            rt_fn_lcase_s: None,
+            rt_fn_trim_s: None,
             gosub_return_var: None,
             gosub_dispatch_bb: None,
             gosub_counter: 0,
@@ -434,6 +460,93 @@ impl<'ctx> Codegen<'ctx> {
                 ],
                 false,
             ),
+            None,
+        ));
+
+        // ── String built-in functions ──
+        self.rt_fn_len = Some(self.module.add_function(
+            "rb_fn_len",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_fn_asc = Some(self.module.add_function(
+            "rb_fn_asc",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_fn_chr_s = Some(self.module.add_function(
+            "rb_fn_chr_s",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_fn_left_s = Some(self.module.add_function(
+            "rb_fn_left_s",
+            ptr_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_fn_right_s = Some(self.module.add_function(
+            "rb_fn_right_s",
+            ptr_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_fn_mid_s = Some(self.module.add_function(
+            "rb_fn_mid_s",
+            ptr_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_fn_instr = Some(self.module.add_function(
+            "rb_fn_instr",
+            i32_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(ptr_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_fn_str_s = Some(self.module.add_function(
+            "rb_fn_str_s",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(f32_t)], false),
+            None,
+        ));
+        self.rt_fn_val = Some(self.module.add_function(
+            "rb_fn_val",
+            f32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_fn_ucase_s = Some(self.module.add_function(
+            "rb_fn_ucase_s",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_fn_lcase_s = Some(self.module.add_function(
+            "rb_fn_lcase_s",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_fn_trim_s = Some(self.module.add_function(
+            "rb_fn_trim_s",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
             None,
         ));
     }
@@ -2013,22 +2126,118 @@ impl<'ctx> Codegen<'ctx> {
                         .unwrap_or(self.f32_type.const_zero().as_basic_value_enum());
                     Ok(result)
                 } else {
-                    let fn_name = format!("rb_fn_{}", name.to_lowercase());
-                    if let Some(func) = self.module.get_function(&fn_name) {
-                        let mut arg_vals: Vec<BasicMetadataValueEnum> = Vec::new();
-                        for arg in args {
-                            let val = self.compile_expr(arg, VarType::Float)?;
-                            arg_vals.push(val.into());
+                    // Built-in string functions with correct type signatures
+                    let upper = name.to_uppercase();
+                    match upper.as_str() {
+                        "LEN" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_len.unwrap(), &[s.into()], "len"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
                         }
-                        let result = self
-                            .builder
-                            .build_call(func, &arg_vals, "fn_call")?
-                            .try_as_basic_value()
-                            .left()
-                            .unwrap_or(self.f32_type.const_zero().as_basic_value_enum());
-                        Ok(result)
-                    } else {
-                        Ok(self.f32_type.const_zero().as_basic_value_enum())
+                        "ASC" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_asc.unwrap(), &[s.into()], "asc"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "CHR$" => {
+                            let n = self.compile_expr(&args[0], VarType::Integer)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_chr_s.unwrap(), &[n.into()], "chr"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "LEFT$" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let n = self.compile_expr(&args[1], VarType::Integer)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_left_s.unwrap(), &[s.into(), n.into()], "left"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "RIGHT$" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let n = self.compile_expr(&args[1], VarType::Integer)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_right_s.unwrap(), &[s.into(), n.into()], "right"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "MID$" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let start = self.compile_expr(&args[1], VarType::Integer)?;
+                            let len = self.compile_expr(&args[2], VarType::Integer)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_mid_s.unwrap(), &[s.into(), start.into(), len.into()], "mid"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "INSTR" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let find = self.compile_expr(&args[1], VarType::String)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_instr.unwrap(), &[s.into(), find.into()], "instr"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "STR$" => {
+                            let n = self.compile_expr(&args[0], VarType::Float)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_str_s.unwrap(), &[n.into()], "str"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "VAL" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_val.unwrap(), &[s.into()], "val"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "UCASE$" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_ucase_s.unwrap(), &[s.into()], "ucase"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "LCASE$" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_lcase_s.unwrap(), &[s.into()], "lcase"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        "TRIM$" => {
+                            let s = self.compile_expr(&args[0], VarType::String)?;
+                            let result = self.builder.build_call(
+                                self.rt_fn_trim_s.unwrap(), &[s.into()], "trim"
+                            )?.try_as_basic_value().left().unwrap();
+                            Ok(result)
+                        }
+                        _ => {
+                            // Generic fallback for other built-ins (math, etc.)
+                            let fn_name = format!("rb_fn_{}", name.to_lowercase());
+                            if let Some(func) = self.module.get_function(&fn_name) {
+                                let mut arg_vals: Vec<BasicMetadataValueEnum> = Vec::new();
+                                for arg in args {
+                                    let val = self.compile_expr(arg, VarType::Float)?;
+                                    arg_vals.push(val.into());
+                                }
+                                let result = self
+                                    .builder
+                                    .build_call(func, &arg_vals, "fn_call")?
+                                    .try_as_basic_value()
+                                    .left()
+                                    .unwrap_or(self.f32_type.const_zero().as_basic_value_enum());
+                                Ok(result)
+                            } else {
+                                Ok(self.f32_type.const_zero().as_basic_value_enum())
+                            }
+                        }
                     }
                 }
             }
@@ -2303,7 +2512,16 @@ impl<'ctx> Codegen<'ctx> {
                 if let Some(func_info) = self.sema.functions.get(name) {
                     return Self::qb_to_var(&func_info.return_type);
                 }
-                VarType::Float
+                // Built-in function type inference
+                let upper = name.to_uppercase();
+                if upper.ends_with('$') {
+                    return VarType::String;
+                }
+                match upper.as_str() {
+                    "LEN" | "ASC" | "INSTR" => VarType::Integer,
+                    "VAL" => VarType::Float,
+                    _ => VarType::Float,
+                }
             }
             Expr::ArrayAccess { var_type, .. } => Self::qb_to_var(var_type),
         }
