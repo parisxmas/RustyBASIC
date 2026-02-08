@@ -425,6 +425,41 @@ pub enum Statement {
         var_type: QBType,
         span: Span,
     },
+    LedSetup {
+        pin: Expr,
+        count: Expr,
+        span: Span,
+    },
+    LedSet {
+        index: Expr,
+        r: Expr,
+        g: Expr,
+        b: Expr,
+        span: Span,
+    },
+    LedShow {
+        span: Span,
+    },
+    LedClear {
+        span: Span,
+    },
+    DeepSleep {
+        ms: Expr,
+        span: Span,
+    },
+    EspnowInit {
+        span: Span,
+    },
+    EspnowSend {
+        peer: Expr,
+        data: Expr,
+        span: Span,
+    },
+    EspnowReceive {
+        target: String,
+        var_type: QBType,
+        span: Span,
+    },
 
     /// Array element assignment: arr(i, j) = expr
     ArrayAssign {

@@ -383,6 +383,14 @@ impl Parser {
             Some(TokenKind::JsonGet) => self.parse_json_get(),
             Some(TokenKind::JsonSet) => self.parse_json_set(),
             Some(TokenKind::JsonCount) => self.parse_json_count(),
+            Some(TokenKind::LedSetup) => self.parse_led_setup(),
+            Some(TokenKind::LedSet) => self.parse_led_set(),
+            Some(TokenKind::LedShow) => self.parse_led_show(),
+            Some(TokenKind::LedClear) => self.parse_led_clear(),
+            Some(TokenKind::DeepSleep) => self.parse_deepsleep(),
+            Some(TokenKind::EspnowInit) => self.parse_espnow_init(),
+            Some(TokenKind::EspnowSend) => self.parse_espnow_send(),
+            Some(TokenKind::EspnowReceive) => self.parse_espnow_receive(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -1545,6 +1553,90 @@ impl Parser {
         let (target, var_type) = self.expect_variable()?;
         Ok(Statement::JsonCount {
             json,
+            target,
+            var_type,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_led_setup(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pin = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let count = self.parse_expr()?;
+        Ok(Statement::LedSetup {
+            pin,
+            count,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_led_set(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let index = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let r = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let g = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let b = self.parse_expr()?;
+        Ok(Statement::LedSet {
+            index,
+            r,
+            g,
+            b,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_led_show(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::LedShow { span })
+    }
+
+    fn parse_led_clear(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::LedClear { span })
+    }
+
+    fn parse_deepsleep(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let ms = self.parse_expr()?;
+        Ok(Statement::DeepSleep {
+            ms,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_espnow_init(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::EspnowInit { span })
+    }
+
+    fn parse_espnow_send(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let peer = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let data = self.parse_expr()?;
+        Ok(Statement::EspnowSend {
+            peer,
+            data,
+            span: start.merge(self.prev_span()),
+        })
+    }
+
+    fn parse_espnow_receive(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::EspnowReceive {
             target,
             var_type,
             span: start.merge(self.prev_span()),

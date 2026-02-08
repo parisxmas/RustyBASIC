@@ -129,6 +129,14 @@ pub struct Codegen<'ctx> {
     rt_json_get: Option<FunctionValue<'ctx>>,
     rt_json_set: Option<FunctionValue<'ctx>>,
     rt_json_count: Option<FunctionValue<'ctx>>,
+    rt_led_setup: Option<FunctionValue<'ctx>>,
+    rt_led_set: Option<FunctionValue<'ctx>>,
+    rt_led_show: Option<FunctionValue<'ctx>>,
+    rt_led_clear: Option<FunctionValue<'ctx>>,
+    rt_deepsleep: Option<FunctionValue<'ctx>>,
+    rt_espnow_init: Option<FunctionValue<'ctx>>,
+    rt_espnow_send: Option<FunctionValue<'ctx>>,
+    rt_espnow_receive: Option<FunctionValue<'ctx>>,
     rt_powf: Option<FunctionValue<'ctx>>,
     rt_array_alloc: Option<FunctionValue<'ctx>>,
     rt_array_free: Option<FunctionValue<'ctx>>,
@@ -259,6 +267,14 @@ impl<'ctx> Codegen<'ctx> {
             rt_json_get: None,
             rt_json_set: None,
             rt_json_count: None,
+            rt_led_setup: None,
+            rt_led_set: None,
+            rt_led_show: None,
+            rt_led_clear: None,
+            rt_deepsleep: None,
+            rt_espnow_init: None,
+            rt_espnow_send: None,
+            rt_espnow_receive: None,
             rt_powf: None,
             rt_array_alloc: None,
             rt_array_free: None,
@@ -677,6 +693,66 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_json_count = Some(self.module.add_function(
             "rb_json_count",
             i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_led_setup = Some(self.module.add_function(
+            "rb_led_setup",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_led_set = Some(self.module.add_function(
+            "rb_led_set",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                    BasicMetadataTypeEnum::from(i32_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_led_show = Some(self.module.add_function(
+            "rb_led_show",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_led_clear = Some(self.module.add_function(
+            "rb_led_clear",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_deepsleep = Some(self.module.add_function(
+            "rb_deepsleep",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_espnow_init = Some(self.module.add_function(
+            "rb_espnow_init",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_espnow_send = Some(self.module.add_function(
+            "rb_espnow_send",
+            void_t.fn_type(
+                &[
+                    BasicMetadataTypeEnum::from(ptr_t),
+                    BasicMetadataTypeEnum::from(ptr_t),
+                ],
+                false,
+            ),
+            None,
+        ));
+        self.rt_espnow_receive = Some(self.module.add_function(
+            "rb_espnow_receive",
+            ptr_t.fn_type(&[], false),
             None,
         ));
         self.rt_powf = Some(self.module.add_function(
@@ -2367,6 +2443,70 @@ impl<'ctx> Codegen<'ctx> {
                         &[j.into()],
                         "json_cnt",
                     )?
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::LedSetup { pin, count, .. } => {
+                let p = self.compile_expr_as_i32(pin)?;
+                let c = self.compile_expr_as_i32(count)?;
+                self.builder.build_call(
+                    self.rt_led_setup.unwrap(),
+                    &[p.into(), c.into()],
+                    "",
+                )?;
+            }
+            Statement::LedSet { index, r, g, b, .. } => {
+                let idx = self.compile_expr_as_i32(index)?;
+                let rv = self.compile_expr_as_i32(r)?;
+                let gv = self.compile_expr_as_i32(g)?;
+                let bv = self.compile_expr_as_i32(b)?;
+                self.builder.build_call(
+                    self.rt_led_set.unwrap(),
+                    &[idx.into(), rv.into(), gv.into(), bv.into()],
+                    "",
+                )?;
+            }
+            Statement::LedShow { .. } => {
+                self.builder
+                    .build_call(self.rt_led_show.unwrap(), &[], "")?;
+            }
+            Statement::LedClear { .. } => {
+                self.builder
+                    .build_call(self.rt_led_clear.unwrap(), &[], "")?;
+            }
+            Statement::DeepSleep { ms, .. } => {
+                let ms_val = self.compile_expr_as_i32(ms)?;
+                self.builder.build_call(
+                    self.rt_deepsleep.unwrap(),
+                    &[BasicMetadataValueEnum::from(ms_val)],
+                    "",
+                )?;
+            }
+            Statement::EspnowInit { .. } => {
+                self.builder
+                    .build_call(self.rt_espnow_init.unwrap(), &[], "")?;
+            }
+            Statement::EspnowSend { peer, data, .. } => {
+                let p = self.compile_expr(peer, VarType::String)?.into_pointer_value();
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder.build_call(
+                    self.rt_espnow_send.unwrap(),
+                    &[p.into(), d.into()],
+                    "",
+                )?;
+            }
+            Statement::EspnowReceive {
+                target, var_type, ..
+            } => {
+                let result = self
+                    .builder
+                    .build_call(self.rt_espnow_receive.unwrap(), &[], "espnow_val")?
                     .try_as_basic_value()
                     .left()
                     .unwrap();

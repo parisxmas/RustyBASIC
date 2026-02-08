@@ -593,6 +593,14 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `JSON.GET json$, key$, var$` | Extract value by key (dot-notation for nested) |
 | `JSON.SET json$, key$, val$, var$` | Set key in JSON, returns updated JSON |
 | `JSON.COUNT json$, var` | Count elements in JSON array/object |
+| `LED.SETUP pin, count` | Initialize WS2812 NeoPixel strip |
+| `LED.SET index, r, g, b` | Set pixel color (0-255 per channel) |
+| `LED.SHOW` | Push pixel buffer to LED strip |
+| `LED.CLEAR` | Turn off all pixels |
+| `DEEPSLEEP ms` | Enter deep sleep for ms milliseconds |
+| `ESPNOW.INIT` | Initialize ESP-NOW peer-to-peer networking |
+| `ESPNOW.SEND peer$, data$` | Send data to peer MAC address |
+| `ESPNOW.RECEIVE var$` | Receive ESP-NOW message (blocking) |
 
 ## Project Structure
 
@@ -635,7 +643,10 @@ RustyBASIC/
 │   ├── nvs.bas
 │   ├── mqtt.bas
 │   ├── ble.bas
-│   └── json.bas
+│   ├── json.bas
+│   ├── neopixel.bas
+│   ├── deepsleep.bas
+│   └── espnow.bas
 └── tests/
 ```
 

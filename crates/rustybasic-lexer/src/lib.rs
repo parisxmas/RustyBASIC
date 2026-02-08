@@ -194,6 +194,22 @@ pub enum TokenKind {
     JsonSet,
     #[regex(r"(?i:JSON\.COUNT)")]
     JsonCount,
+    #[regex(r"(?i:LED\.SETUP)")]
+    LedSetup,
+    #[regex(r"(?i:LED\.SET)")]
+    LedSet,
+    #[regex(r"(?i:LED\.SHOW)")]
+    LedShow,
+    #[regex(r"(?i:LED\.CLEAR)")]
+    LedClear,
+    #[regex(r"(?i:DEEPSLEEP)")]
+    DeepSleep,
+    #[regex(r"(?i:ESPNOW\.INIT)")]
+    EspnowInit,
+    #[regex(r"(?i:ESPNOW\.SEND)")]
+    EspnowSend,
+    #[regex(r"(?i:ESPNOW\.RECEIVE)")]
+    EspnowReceive,
 
     // ── Literals ────────────────────────────────────────────
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f32>().ok())]
@@ -361,6 +377,14 @@ impl std::fmt::Display for TokenKind {
             TokenKind::JsonGet => write!(f, "JSON.GET"),
             TokenKind::JsonSet => write!(f, "JSON.SET"),
             TokenKind::JsonCount => write!(f, "JSON.COUNT"),
+            TokenKind::LedSetup => write!(f, "LED.SETUP"),
+            TokenKind::LedSet => write!(f, "LED.SET"),
+            TokenKind::LedShow => write!(f, "LED.SHOW"),
+            TokenKind::LedClear => write!(f, "LED.CLEAR"),
+            TokenKind::DeepSleep => write!(f, "DEEPSLEEP"),
+            TokenKind::EspnowInit => write!(f, "ESPNOW.INIT"),
+            TokenKind::EspnowSend => write!(f, "ESPNOW.SEND"),
+            TokenKind::EspnowReceive => write!(f, "ESPNOW.RECEIVE"),
             TokenKind::FloatLiteral(v) => write!(f, "{v}"),
             TokenKind::IntLiteral(v) => write!(f, "{v}"),
             TokenKind::StringLiteral(v) => write!(f, "\"{v}\""),

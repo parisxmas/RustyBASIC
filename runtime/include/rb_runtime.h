@@ -118,6 +118,23 @@ rb_string_t* rb_json_get(rb_string_t* json, rb_string_t* key);
 rb_string_t* rb_json_set(rb_string_t* json, rb_string_t* key, rb_string_t* value);
 int32_t rb_json_count(rb_string_t* json);
 
+/* ── NeoPixel (WS2812) ────────────────────────────────── */
+
+void rb_led_setup(int32_t pin, int32_t count);
+void rb_led_set(int32_t index, int32_t r, int32_t g, int32_t b);
+void rb_led_show(void);
+void rb_led_clear(void);
+
+/* ── Deep Sleep ───────────────────────────────────────── */
+
+void rb_deepsleep(int32_t ms);
+
+/* ── ESP-NOW ──────────────────────────────────────────── */
+
+void rb_espnow_init(void);
+void rb_espnow_send(rb_string_t* peer, rb_string_t* data);
+rb_string_t* rb_espnow_receive(void);
+
 /* ── Arrays ───────────────────────────────────────────── */
 
 void rb_array_check_dim_size(int32_t dim_value, int32_t dim_index);

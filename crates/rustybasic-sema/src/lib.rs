@@ -889,6 +889,31 @@ impl SemanticAnalyzer {
                 self.check_expr(json);
                 self.declare_or_check_var(target, var_type, *span);
             }
+            Statement::LedSetup { pin, count, .. } => {
+                self.check_expr(pin);
+                self.check_expr(count);
+            }
+            Statement::LedSet { index, r, g, b, .. } => {
+                self.check_expr(index);
+                self.check_expr(r);
+                self.check_expr(g);
+                self.check_expr(b);
+            }
+            Statement::LedShow { .. } => {}
+            Statement::LedClear { .. } => {}
+            Statement::DeepSleep { ms, .. } => {
+                self.check_expr(ms);
+            }
+            Statement::EspnowInit { .. } => {}
+            Statement::EspnowSend { peer, data, .. } => {
+                self.check_expr(peer);
+                self.check_expr(data);
+            }
+            Statement::EspnowReceive {
+                target, var_type, span,
+            } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
             Statement::ArrayAssign {
                 name,
                 var_type: _,
