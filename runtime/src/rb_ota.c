@@ -9,10 +9,13 @@
 
 void rb_ota_update(rb_string_t* url) {
 #ifdef ESP_PLATFORM
-    esp_http_client_config_t config = {
-        .url = url->data,
+    esp_http_client_config_t http_config = {
+        .url = url ? url->data : "",
     };
-    esp_err_t ret = esp_https_ota(&config);
+    esp_https_ota_config_t ota_config = {
+        .http_config = &http_config,
+    };
+    esp_err_t ret = esp_https_ota(&ota_config);
     if (ret == ESP_OK) {
         esp_restart();
     }

@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = '../esp-project/build/rustybasic_firmware.bin'
+elf = '../esp-project/build/rustybasic_firmware.elf'

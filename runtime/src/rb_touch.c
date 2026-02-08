@@ -1,18 +1,12 @@
 #include "rb_runtime.h"
 #include <stdio.h>
 
-#ifdef ESP_PLATFORM
-#include "driver/touch_pad.h"
-#endif
+/* ESP32-C3 does NOT have a touch sensor peripheral.
+   Touch sensors are available on ESP32, ESP32-S2, and ESP32-S3.
+   This file provides a stub implementation. */
 
 int32_t rb_touch_read(int32_t pin) {
-#ifdef ESP_PLATFORM
-    uint32_t val = 0;
-    touch_pad_read_raw_data((touch_pad_t)pin, &val);
-    return (int32_t)val;
-#else
     (void)pin;
-    fprintf(stderr, "[stub] TOUCH.READ not supported on host\n");
+    fprintf(stderr, "[stub] TOUCH.READ not available on ESP32-C3\n");
     return 0;
-#endif
 }

@@ -72,6 +72,11 @@ static const struct ble_gatt_svc_def ble_svcs[] = {
     { 0 },
 };
 
+static void nimble_host_task(void *param) {
+    (void)param;
+    nimble_port_run();
+}
+
 static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
@@ -101,7 +106,7 @@ void rb_ble_init(rb_string_t* name) {
     ble_svc_gatt_init();
     ble_gatts_count_cfg(ble_svcs);
     ble_gatts_add_svcs(ble_svcs);
-    nimble_port_freertos_init(nimble_port_run);
+    nimble_port_freertos_init(nimble_host_task);
 #else
     printf("[BLE] init: name=%s\n", name ? name->data : "(null)");
 #endif

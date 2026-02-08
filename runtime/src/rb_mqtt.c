@@ -48,8 +48,8 @@ void rb_mqtt_connect(rb_string_t* broker, int32_t port) {
         mqtt_recv_queue = xQueueCreate(MQTT_RECV_QUEUE_SIZE, sizeof(mqtt_msg_t));
     }
     esp_mqtt_client_config_t config = {
-        .broker.uri = broker ? broker->data : "",
-        .broker.port = (uint32_t)port,
+        .broker.address.uri = broker ? broker->data : "",
+        .broker.address.port = (uint32_t)port,
     };
     mqtt_client = esp_mqtt_client_init(&config);
     esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID,
