@@ -1,6 +1,6 @@
 # RustyBASIC
 
-A QBASIC compiler written in Rust that targets the **ESP32-C3** (RISC-V) microcontroller. Write embedded programs in familiar BASIC syntax instead of C/C++.
+An **experimental** QBASIC compiler written in Rust that targets the **ESP32-C3** (RISC-V) microcontroller. Write embedded programs in familiar BASIC syntax instead of C/C++.
 
 ```
 .bas source --> [Lexer] --> [Parser] --> [Sema] --> [LLVM Codegen] --> .o (RISC-V)
