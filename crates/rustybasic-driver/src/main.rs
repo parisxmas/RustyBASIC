@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{Context, Result};
@@ -69,7 +70,7 @@ enum Commands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let source = std::fs::read_to_string(&cli.source)
+    let source = resolve_includes(&cli.source, &mut HashSet::new())
         .with_context(|| format!("failed to read {}", cli.source.display()))?;
 
     let mut files = SimpleFiles::new();
@@ -198,6 +199,69 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Recursively resolve `INCLUDE "file.bas"` directives by inlining the
+/// included file's contents. Paths are resolved relative to the directory
+/// of the file that contains the directive. Circular includes are detected
+/// via a visited set of canonical paths.
+fn resolve_includes(path: &Path, visited: &mut HashSet<PathBuf>) -> Result<String> {
+    let canonical = path
+        .canonicalize()
+        .with_context(|| format!("cannot resolve path: {}", path.display()))?;
+
+    if !visited.insert(canonical.clone()) {
+        anyhow::bail!("circular INCLUDE detected: {}", path.display());
+    }
+
+    let content = std::fs::read_to_string(path)
+        .with_context(|| format!("failed to read {}", path.display()))?;
+
+    let base_dir = path.parent().unwrap_or_else(|| Path::new("."));
+    let mut output = String::with_capacity(content.len());
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if let Some(included_file) = parse_include_directive(trimmed) {
+            let include_path = base_dir.join(included_file);
+            let included_source = resolve_includes(&include_path, visited)?;
+            output.push_str(&included_source);
+            if !included_source.ends_with('\n') {
+                output.push('\n');
+            }
+        } else {
+            output.push_str(line);
+            output.push('\n');
+        }
+    }
+
+    visited.remove(&canonical);
+    Ok(output)
+}
+
+/// Parse an `INCLUDE "filename"` directive (case-insensitive).
+/// Returns `Some(filename)` if the line matches, `None` otherwise.
+fn parse_include_directive(line: &str) -> Option<&str> {
+    let line = line.trim();
+    let rest = line.strip_prefix("INCLUDE")
+        .or_else(|| line.strip_prefix("include"))
+        .or_else(|| {
+            // General case-insensitive check
+            if line.len() >= 7 && line[..7].eq_ignore_ascii_case("INCLUDE") {
+                Some(&line[7..])
+            } else {
+                None
+            }
+        })?;
+
+    let rest = rest.trim();
+    let rest = rest.strip_prefix('"')?;
+    let end = rest.find('"')?;
+    let filename = &rest[..end];
+    if filename.is_empty() {
+        return None;
+    }
+    Some(filename)
 }
 
 fn parse_target(target: &str) -> Result<TargetConfig> {

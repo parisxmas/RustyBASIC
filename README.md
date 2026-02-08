@@ -348,6 +348,45 @@ END IF
 END
 ```
 
+### INCLUDE Directive
+
+Split code across multiple files with `INCLUDE`:
+
+**include_lib.bas**
+```basic
+CONST PI = 3.14159
+CONST GREETING = "Hello from the library!"
+
+DECLARE SUB PrintBanner (title AS STRING)
+DECLARE FUNCTION CircleArea! (radius AS SINGLE)
+
+SUB PrintBanner (title AS STRING)
+    PRINT "==========================="
+    PRINT " "; title
+    PRINT "==========================="
+END SUB
+
+FUNCTION CircleArea! (radius AS SINGLE)
+    CircleArea! = PI * radius * radius
+END FUNCTION
+```
+
+**include_main.bas**
+```basic
+INCLUDE "include_lib.bas"
+
+DIM r AS SINGLE
+r = 5.0
+
+CALL PrintBanner(GREETING)
+PRINT "Radius:"; r
+PRINT "Area:"; CircleArea!(r)
+
+END
+```
+
+Paths are resolved relative to the including file's directory. Circular includes are detected and reported as errors.
+
 ### DO...LOOP Variations
 
 ```basic
@@ -428,6 +467,12 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `GOSUB label` / `RETURN` | Subroutine call/return |
 | `EXIT FOR/DO/SUB/FUNCTION` | Early exit |
 
+### Preprocessor
+
+| Directive | Description |
+|-----------|-------------|
+| `INCLUDE "file.bas"` | Inline another source file (resolved relative to current file) |
+
 ### I/O
 
 | Statement | Description |
@@ -481,7 +526,9 @@ RustyBASIC/
 │   ├── i2c.bas
 │   ├── spi.bas
 │   ├── wifi_disconnect.bas
-│   └── wifi_scan.bas
+│   ├── wifi_scan.bas
+│   ├── include_main.bas
+│   └── include_lib.bas
 └── tests/
 ```
 
