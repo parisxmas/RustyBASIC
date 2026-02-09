@@ -221,6 +221,30 @@ pub struct Codegen<'ctx> {
     rt_i2s_init: Option<FunctionValue<'ctx>>,
     rt_i2s_write: Option<FunctionValue<'ctx>>,
     rt_i2s_stop: Option<FunctionValue<'ctx>>,
+    // Web Server
+    rt_web_start: Option<FunctionValue<'ctx>>,
+    rt_web_wait: Option<FunctionValue<'ctx>>,
+    rt_web_body: Option<FunctionValue<'ctx>>,
+    rt_web_reply: Option<FunctionValue<'ctx>>,
+    rt_web_stop: Option<FunctionValue<'ctx>>,
+    // SD Card
+    rt_sd_init: Option<FunctionValue<'ctx>>,
+    rt_sd_open: Option<FunctionValue<'ctx>>,
+    rt_sd_write: Option<FunctionValue<'ctx>>,
+    rt_sd_read: Option<FunctionValue<'ctx>>,
+    rt_sd_close: Option<FunctionValue<'ctx>>,
+    rt_sd_free: Option<FunctionValue<'ctx>>,
+    // Async
+    rt_yield: Option<FunctionValue<'ctx>>,
+    rt_await: Option<FunctionValue<'ctx>>,
+    // Cron
+    rt_cron_add: Option<FunctionValue<'ctx>>,
+    rt_cron_check: Option<FunctionValue<'ctx>>,
+    rt_cron_remove: Option<FunctionValue<'ctx>>,
+    // Regex
+    rt_regex_match: Option<FunctionValue<'ctx>>,
+    rt_regex_find: Option<FunctionValue<'ctx>>,
+    rt_regex_replace: Option<FunctionValue<'ctx>>,
 
     // String built-in function declarations
     rt_fn_len: Option<FunctionValue<'ctx>>,
@@ -438,6 +462,25 @@ impl<'ctx> Codegen<'ctx> {
             rt_i2s_init: None,
             rt_i2s_write: None,
             rt_i2s_stop: None,
+            rt_web_start: None,
+            rt_web_wait: None,
+            rt_web_body: None,
+            rt_web_reply: None,
+            rt_web_stop: None,
+            rt_sd_init: None,
+            rt_sd_open: None,
+            rt_sd_write: None,
+            rt_sd_read: None,
+            rt_sd_close: None,
+            rt_sd_free: None,
+            rt_yield: None,
+            rt_await: None,
+            rt_cron_add: None,
+            rt_cron_check: None,
+            rt_cron_remove: None,
+            rt_regex_match: None,
+            rt_regex_find: None,
+            rt_regex_replace: None,
             rt_fn_len: None,
             rt_fn_asc: None,
             rt_fn_chr_s: None,
@@ -1474,6 +1517,111 @@ impl<'ctx> Codegen<'ctx> {
         self.rt_i2s_stop = Some(self.module.add_function(
             "rb_i2s_stop",
             void_t.fn_type(&[], false),
+            None,
+        ));
+
+        // ── Web Server ──────────────────────────────────────
+        self.rt_web_start = Some(self.module.add_function(
+            "rb_web_start",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_web_wait = Some(self.module.add_function(
+            "rb_web_wait",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_web_body = Some(self.module.add_function(
+            "rb_web_body",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_web_reply = Some(self.module.add_function(
+            "rb_web_reply",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_web_stop = Some(self.module.add_function(
+            "rb_web_stop",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+
+        // ── SD Card ─────────────────────────────────────────
+        self.rt_sd_init = Some(self.module.add_function(
+            "rb_sd_init",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_sd_open = Some(self.module.add_function(
+            "rb_sd_open",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_sd_write = Some(self.module.add_function(
+            "rb_sd_write",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_sd_read = Some(self.module.add_function(
+            "rb_sd_read",
+            ptr_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_sd_close = Some(self.module.add_function(
+            "rb_sd_close",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_sd_free = Some(self.module.add_function(
+            "rb_sd_free",
+            i32_t.fn_type(&[], false),
+            None,
+        ));
+
+        // ── Async ───────────────────────────────────────────
+        self.rt_yield = Some(self.module.add_function(
+            "rb_yield",
+            void_t.fn_type(&[], false),
+            None,
+        ));
+        self.rt_await = Some(self.module.add_function(
+            "rb_await",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+
+        // ── Cron ────────────────────────────────────────────
+        self.rt_cron_add = Some(self.module.add_function(
+            "rb_cron_add",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_cron_check = Some(self.module.add_function(
+            "rb_cron_check",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+        self.rt_cron_remove = Some(self.module.add_function(
+            "rb_cron_remove",
+            void_t.fn_type(&[BasicMetadataTypeEnum::from(i32_t)], false),
+            None,
+        ));
+
+        // ── Regex ───────────────────────────────────────────
+        self.rt_regex_match = Some(self.module.add_function(
+            "rb_regex_match",
+            i32_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_regex_find = Some(self.module.add_function(
+            "rb_regex_find",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t)], false),
+            None,
+        ));
+        self.rt_regex_replace = Some(self.module.add_function(
+            "rb_regex_replace",
+            ptr_t.fn_type(&[BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t), BasicMetadataTypeEnum::from(ptr_t)], false),
             None,
         ));
     }
@@ -4096,6 +4244,132 @@ impl<'ctx> Codegen<'ctx> {
             Statement::I2sStop { .. } => {
                 self.builder.build_call(self.rt_i2s_stop.unwrap(), &[], "")?;
             }
+
+            // ── Web Server ──────────────────────────────────
+            Statement::WebStart { port, .. } => {
+                let p = self.compile_expr_as_i32(port)?;
+                self.builder.build_call(self.rt_web_start.unwrap(), &[BasicMetadataValueEnum::from(p)], "")?;
+            }
+            Statement::WebWaitStr { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_web_wait.unwrap(), &[], "web_wait")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::WebBodyStr { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_web_body.unwrap(), &[], "web_body")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::WebReply { status, body, .. } => {
+                let s = self.compile_expr_as_i32(status)?;
+                let b = self.compile_expr(body, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_web_reply.unwrap(), &[s.into(), b.into()], "")?;
+            }
+            Statement::WebStop { .. } => {
+                self.builder.build_call(self.rt_web_stop.unwrap(), &[], "")?;
+            }
+
+            // ── SD Card ─────────────────────────────────────
+            Statement::SdInit { cs_pin, .. } => {
+                let p = self.compile_expr_as_i32(cs_pin)?;
+                self.builder.build_call(self.rt_sd_init.unwrap(), &[BasicMetadataValueEnum::from(p)], "")?;
+            }
+            Statement::SdOpen { path, mode, .. } => {
+                let p = self.compile_expr(path, VarType::String)?.into_pointer_value();
+                let m = self.compile_expr(mode, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_sd_open.unwrap(), &[p.into(), m.into()], "")?;
+            }
+            Statement::SdWrite { data, .. } => {
+                let d = self.compile_expr(data, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_sd_write.unwrap(), &[d.into()], "")?;
+            }
+            Statement::SdReadStr { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_sd_read.unwrap(), &[], "sd_read")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::SdClose { .. } => {
+                self.builder.build_call(self.rt_sd_close.unwrap(), &[], "")?;
+            }
+            Statement::SdFree { target, var_type, .. } => {
+                let result = self.builder.build_call(self.rt_sd_free.unwrap(), &[], "sd_free")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+
+            // ── Async ───────────────────────────────────────
+            Statement::YieldStmt { .. } => {
+                self.builder.build_call(self.rt_yield.unwrap(), &[], "")?;
+            }
+            Statement::AwaitStmt { ms, .. } => {
+                let m = self.compile_expr_as_i32(ms)?;
+                self.builder.build_call(self.rt_await.unwrap(), &[BasicMetadataValueEnum::from(m)], "")?;
+            }
+
+            // ── Cron ────────────────────────────────────────
+            Statement::CronAdd { id, expr, .. } => {
+                let i = self.compile_expr_as_i32(id)?;
+                let e = self.compile_expr(expr, VarType::String)?.into_pointer_value();
+                self.builder.build_call(self.rt_cron_add.unwrap(), &[i.into(), e.into()], "")?;
+            }
+            Statement::CronCheck { id, target, var_type, .. } => {
+                let i = self.compile_expr_as_i32(id)?;
+                let result = self.builder.build_call(self.rt_cron_check.unwrap(), &[BasicMetadataValueEnum::from(i)], "cron_check")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::CronRemove { id, .. } => {
+                let i = self.compile_expr_as_i32(id)?;
+                self.builder.build_call(self.rt_cron_remove.unwrap(), &[BasicMetadataValueEnum::from(i)], "")?;
+            }
+
+            // ── Regex ───────────────────────────────────────
+            Statement::RegexMatch { pattern, text, target, var_type, .. } => {
+                let p = self.compile_expr(pattern, VarType::String)?.into_pointer_value();
+                let t = self.compile_expr(text, VarType::String)?.into_pointer_value();
+                let result = self.builder.build_call(self.rt_regex_match.unwrap(), &[p.into(), t.into()], "regex_match")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::RegexFindStr { pattern, text, target, var_type, .. } => {
+                let p = self.compile_expr(pattern, VarType::String)?.into_pointer_value();
+                let t = self.compile_expr(text, VarType::String)?.into_pointer_value();
+                let result = self.builder.build_call(self.rt_regex_find.unwrap(), &[p.into(), t.into()], "regex_find")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
+            Statement::RegexReplaceStr { pattern, text, replacement, target, var_type, .. } => {
+                let p = self.compile_expr(pattern, VarType::String)?.into_pointer_value();
+                let t = self.compile_expr(text, VarType::String)?.into_pointer_value();
+                let r = self.compile_expr(replacement, VarType::String)?.into_pointer_value();
+                let result = self.builder.build_call(self.rt_regex_replace.unwrap(), &[p.into(), t.into(), r.into()], "regex_replace")?.try_as_basic_value().left().unwrap();
+                let vt = Self::qb_to_var(var_type);
+                self.ensure_var(target, vt)?;
+                if let Some((alloca, _)) = self.variables.get(target) {
+                    self.builder.build_store(*alloca, result)?;
+                }
+            }
         }
         Ok(())
     }
@@ -4760,7 +5034,7 @@ impl<'ctx> Codegen<'ctx> {
         }
 
         // IntDiv and Xor always use integer
-        if op == BinOp::IntDiv || op == BinOp::Xor {
+        if op == BinOp::IntDiv || op == BinOp::Xor || op == BinOp::Shl || op == BinOp::Shr {
             let lhs = self.compile_expr(left, VarType::Integer)?.into_int_value();
             let rhs = self
                 .compile_expr(right, VarType::Integer)?
@@ -4768,6 +5042,8 @@ impl<'ctx> Codegen<'ctx> {
             let result = match op {
                 BinOp::IntDiv => self.builder.build_int_signed_div(lhs, rhs, "intdiv")?,
                 BinOp::Xor => self.builder.build_xor(lhs, rhs, "xor")?,
+                BinOp::Shl => self.builder.build_left_shift(lhs, rhs, "shl")?,
+                BinOp::Shr => self.builder.build_right_shift(lhs, rhs, false, "shr")?,
                 _ => unreachable!(),
             };
             return Ok(result.as_basic_value_enum());
@@ -4987,6 +5263,8 @@ impl<'ctx> Codegen<'ctx> {
                 | BinOp::And
                 | BinOp::Or
                 | BinOp::Xor
+                | BinOp::Shl
+                | BinOp::Shr
                 | BinOp::IntDiv
         ) {
             return VarType::Integer;

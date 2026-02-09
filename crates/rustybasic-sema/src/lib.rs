@@ -1275,6 +1275,78 @@ impl SemanticAnalyzer {
                 self.check_expr(data);
             }
             Statement::I2sStop { .. } => {}
+
+            // ── Web Server ───────────────────────────────────
+            Statement::WebStart { port, .. } => {
+                self.check_expr(port);
+            }
+            Statement::WebWaitStr { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::WebBodyStr { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::WebReply { status, body, .. } => {
+                self.check_expr(status);
+                self.check_expr(body);
+            }
+            Statement::WebStop { .. } => {}
+
+            // ── SD Card ──────────────────────────────────────
+            Statement::SdInit { cs_pin, .. } => {
+                self.check_expr(cs_pin);
+            }
+            Statement::SdOpen { path, mode, .. } => {
+                self.check_expr(path);
+                self.check_expr(mode);
+            }
+            Statement::SdWrite { data, .. } => {
+                self.check_expr(data);
+            }
+            Statement::SdReadStr { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::SdClose { .. } => {}
+            Statement::SdFree { target, var_type, span, .. } => {
+                self.declare_or_check_var(target, var_type, *span);
+            }
+
+            // ── Async / Yield ────────────────────────────────
+            Statement::YieldStmt { .. } => {}
+            Statement::AwaitStmt { ms, .. } => {
+                self.check_expr(ms);
+            }
+
+            // ── Cron ─────────────────────────────────────────
+            Statement::CronAdd { id, expr, .. } => {
+                self.check_expr(id);
+                self.check_expr(expr);
+            }
+            Statement::CronCheck { id, target, var_type, span, .. } => {
+                self.check_expr(id);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::CronRemove { id, .. } => {
+                self.check_expr(id);
+            }
+
+            // ── Regex ────────────────────────────────────────
+            Statement::RegexMatch { pattern, text, target, var_type, span } => {
+                self.check_expr(pattern);
+                self.check_expr(text);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::RegexFindStr { pattern, text, target, var_type, span } => {
+                self.check_expr(pattern);
+                self.check_expr(text);
+                self.declare_or_check_var(target, var_type, *span);
+            }
+            Statement::RegexReplaceStr { pattern, text, replacement, target, var_type, span } => {
+                self.check_expr(pattern);
+                self.check_expr(text);
+                self.check_expr(replacement);
+                self.declare_or_check_var(target, var_type, *span);
+            }
         }
     }
 

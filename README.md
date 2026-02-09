@@ -705,6 +705,87 @@ I2S.STOP
 PRINT "I2S stopped"
 ```
 
+### Web Server
+
+```basic
+WIFI.CONNECT "MySSID", "MyPassword"
+DELAY 3000
+WEB.START 80
+PRINT "Web server started on port 80"
+WEB.WAIT$ path$
+PRINT "Request for: "; path$
+WEB.BODY$ body$
+PRINT "Body: "; body$
+WEB.REPLY 200, "Hello from RustyBASIC!"
+WEB.STOP
+```
+
+### SD Card
+
+```basic
+SD.INIT 5
+PRINT "SD card initialized"
+SD.OPEN "test.txt", "w"
+SD.WRITE "Hello from RustyBASIC!"
+SD.CLOSE
+PRINT "File written"
+SD.OPEN "test.txt", "r"
+SD.READ$ content$
+SD.CLOSE
+PRINT "Read: "; content$
+SD.FREE space%
+PRINT "Free space: "; space%; " bytes"
+```
+
+### Async / Cooperative Multitasking
+
+```basic
+PRINT "Starting async demo"
+FOR i = 1 TO 5
+    PRINT "Working... "; i
+    YIELD
+    AWAIT 500
+NEXT i
+PRINT "Done"
+```
+
+### Cron Scheduling
+
+```basic
+CRON.ADD 1, "*/5"
+PRINT "Cron job added (every 5 minutes)"
+CRON.CHECK 1, fired%
+PRINT "Should fire: "; fired%
+CRON.REMOVE 1
+PRINT "Cron job removed"
+```
+
+### Regex Pattern Matching
+
+```basic
+DIM text$ AS STRING
+text$ = "Hello World 123"
+REGEX.MATCH "[0-9]+", text$, found%
+PRINT "Has numbers: "; found%
+REGEX.FIND$ "[0-9]+", text$, match$
+PRINT "Found: "; match$
+REGEX.REPLACE$ "[0-9]+", text$, "456", result$
+PRINT "Replaced: "; result$
+```
+
+### Bitwise Shift Operators
+
+```basic
+DIM a AS INTEGER
+a = 1
+PRINT "1 SHL 4 = "; a SHL 4
+PRINT "16 SHR 2 = "; 16 SHR 2
+DIM flags AS INTEGER
+flags = 1 SHL 0 OR 1 SHL 2 OR 1 SHL 4
+PRINT "Flags: "; flags
+PRINT "Bit 2 set: "; (flags SHR 2) AND 1
+```
+
 ## Language Reference
 
 ### Types
@@ -725,6 +806,7 @@ PRINT "I2S stopped"
 | Arithmetic | `+` `-` `*` `/` `\` (int div) `^` (power) `MOD` |
 | Comparison | `=` `<>` `<` `>` `<=` `>=` |
 | Logical | `AND` `OR` `NOT` `XOR` |
+| Bitwise shift | `SHL` (shift left) `SHR` (shift right) |
 
 ### Arrays
 
@@ -931,6 +1013,25 @@ Arrays are fixed-size, heap-allocated, zero-initialized, and bounds-checked at r
 | `I2S.INIT rate, bits, channels` | Initialize I2S audio output |
 | `I2S.WRITE data$` | Write audio data to I2S bus |
 | `I2S.STOP` | Stop and release I2S driver |
+| `WEB.START port` | Start HTTP web server on port |
+| `WEB.WAIT$ var$` | Wait for HTTP request, get path |
+| `WEB.BODY$ var$` | Get request body string |
+| `WEB.REPLY status, body$` | Send HTTP response |
+| `WEB.STOP` | Stop web server |
+| `SD.INIT cs_pin` | Initialize SD card via SPI (CS pin) |
+| `SD.OPEN path$, mode$` | Open file on SD card (`"r"`, `"w"`, `"a"`) |
+| `SD.WRITE data$` | Write string to open SD file |
+| `SD.READ$ var$` | Read string from open SD file |
+| `SD.CLOSE` | Close current SD file |
+| `SD.FREE var%` | Get free space in bytes |
+| `YIELD` | Cooperative yield (FreeRTOS `taskYIELD`) |
+| `AWAIT ms` | Cooperative delay (non-blocking wait) |
+| `CRON.ADD id, expr$` | Add cron job with schedule expression |
+| `CRON.CHECK id, var%` | Check if cron job should fire (1/0) |
+| `CRON.REMOVE id` | Remove cron job |
+| `REGEX.MATCH pattern$, text$, var%` | Test regex match (1/0) |
+| `REGEX.FIND$ pattern$, text$, var$` | Find first regex match |
+| `REGEX.REPLACE$ pattern$, text$, repl$, var$` | Replace regex matches |
 
 ## Project Structure
 
@@ -1006,7 +1107,13 @@ RustyBASIC/
 │   ├── tcp_server.bas
 │   ├── watchdog.bas
 │   ├── https.bas
-│   └── i2s_audio.bas
+│   ├── i2s_audio.bas
+│   ├── web_server.bas
+│   ├── sd_card.bas
+│   ├── async_demo.bas
+│   ├── cron_demo.bas
+│   ├── regex_demo.bas
+│   └── bitwise.bas
 └── tests/
 ```
 

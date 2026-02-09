@@ -468,6 +468,25 @@ impl Parser {
             Some(TokenKind::I2sInit) => self.parse_i2s_init(),
             Some(TokenKind::I2sWrite) => self.parse_i2s_write(),
             Some(TokenKind::I2sStop) => self.parse_i2s_stop(),
+            Some(TokenKind::WebStart) => self.parse_web_start(),
+            Some(TokenKind::WebWaitStr) => self.parse_web_wait_str(),
+            Some(TokenKind::WebBodyStr) => self.parse_web_body_str(),
+            Some(TokenKind::WebReply) => self.parse_web_reply(),
+            Some(TokenKind::WebStop) => self.parse_web_stop(),
+            Some(TokenKind::SdInit) => self.parse_sd_init(),
+            Some(TokenKind::SdOpen) => self.parse_sd_open(),
+            Some(TokenKind::SdWrite) => self.parse_sd_write(),
+            Some(TokenKind::SdReadStr) => self.parse_sd_read_str(),
+            Some(TokenKind::SdClose) => self.parse_sd_close(),
+            Some(TokenKind::SdFree) => self.parse_sd_free(),
+            Some(TokenKind::Yield) => self.parse_yield(),
+            Some(TokenKind::Await) => self.parse_await(),
+            Some(TokenKind::CronAdd) => self.parse_cron_add(),
+            Some(TokenKind::CronCheck) => self.parse_cron_check(),
+            Some(TokenKind::CronRemove) => self.parse_cron_remove(),
+            Some(TokenKind::RegexMatch) => self.parse_regex_match(),
+            Some(TokenKind::RegexFindStr) => self.parse_regex_find_str(),
+            Some(TokenKind::RegexReplaceStr) => self.parse_regex_replace_str(),
             // Implicit LET or SUB call: identifier ...
             Some(
                 TokenKind::Ident(_)
@@ -2380,6 +2399,163 @@ impl Parser {
         Ok(Statement::I2sStop { span })
     }
 
+    // ── Web Server ──────────────────────────────────────
+    fn parse_web_start(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let port = self.parse_expr()?;
+        Ok(Statement::WebStart { port, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_web_wait_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::WebWaitStr { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_web_body_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::WebBodyStr { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_web_reply(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let status = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let body = self.parse_expr()?;
+        Ok(Statement::WebReply { status, body, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_web_stop(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::WebStop { span })
+    }
+
+    // ── SD Card ─────────────────────────────────────────
+    fn parse_sd_init(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let cs_pin = self.parse_expr()?;
+        Ok(Statement::SdInit { cs_pin, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_sd_open(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let path = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let mode = self.parse_expr()?;
+        Ok(Statement::SdOpen { path, mode, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_sd_write(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let data = self.parse_expr()?;
+        Ok(Statement::SdWrite { data, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_sd_read_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::SdReadStr { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_sd_close(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::SdClose { span })
+    }
+
+    fn parse_sd_free(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::SdFree { target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    // ── Async / Yield ───────────────────────────────────
+    fn parse_yield(&mut self) -> ParseResult<Statement> {
+        let span = self.current_span();
+        self.advance();
+        Ok(Statement::YieldStmt { span })
+    }
+
+    fn parse_await(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let ms = self.parse_expr()?;
+        Ok(Statement::AwaitStmt { ms, span: start.merge(self.prev_span()) })
+    }
+
+    // ── Cron ────────────────────────────────────────────
+    fn parse_cron_add(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let id = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let expr = self.parse_expr()?;
+        Ok(Statement::CronAdd { id, expr, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_cron_check(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let id = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::CronCheck { id, target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_cron_remove(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let id = self.parse_expr()?;
+        Ok(Statement::CronRemove { id, span: start.merge(self.prev_span()) })
+    }
+
+    // ── Regex ───────────────────────────────────────────
+    fn parse_regex_match(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pattern = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let text = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::RegexMatch { pattern, text, target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_regex_find_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pattern = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let text = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::RegexFindStr { pattern, text, target, var_type, span: start.merge(self.prev_span()) })
+    }
+
+    fn parse_regex_replace_str(&mut self) -> ParseResult<Statement> {
+        let start = self.current_span();
+        self.advance();
+        let pattern = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let text = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let replacement = self.parse_expr()?;
+        self.expect(TokenKind::Comma)?;
+        let (target, var_type) = self.expect_variable()?;
+        Ok(Statement::RegexReplaceStr { pattern, text, replacement, target, var_type, span: start.merge(self.prev_span()) })
+    }
+
     // ── New language features ──────────────────────────────
 
     fn parse_assert(&mut self) -> ParseResult<Statement> {
@@ -2945,6 +3121,8 @@ impl Parser {
             TokenKind::And => Some(BinOp::And),
             TokenKind::Or => Some(BinOp::Or),
             TokenKind::Xor => Some(BinOp::Xor),
+            TokenKind::Shl => Some(BinOp::Shl),
+            TokenKind::Shr => Some(BinOp::Shr),
             _ => None,
         }
     }
@@ -3141,7 +3319,7 @@ fn infix_binding_power(op: BinOp) -> (u8, u8) {
         BinOp::Or | BinOp::Xor => (1, 2),
         BinOp::And => (3, 4),
         BinOp::Eq | BinOp::Neq | BinOp::Lt | BinOp::Gt | BinOp::Le | BinOp::Ge => (5, 6),
-        BinOp::Add | BinOp::Sub => (7, 8),
+        BinOp::Add | BinOp::Sub | BinOp::Shl | BinOp::Shr => (7, 8),
         BinOp::Mul | BinOp::Div | BinOp::IntDiv | BinOp::Mod => (9, 10),
         BinOp::Pow => (12, 11), // right-associative
     }

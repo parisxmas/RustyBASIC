@@ -331,6 +331,60 @@ pub enum TokenKind {
     #[regex(r"(?i:I2S\.STOP)")]
     I2sStop,
 
+    // ── Web Server ───────────────────────────────────────
+    #[regex(r"(?i:WEB\.START)")]
+    WebStart,
+    #[regex(r"(?i:WEB\.WAIT\$)")]
+    WebWaitStr,
+    #[regex(r"(?i:WEB\.BODY\$)")]
+    WebBodyStr,
+    #[regex(r"(?i:WEB\.REPLY)")]
+    WebReply,
+    #[regex(r"(?i:WEB\.STOP)")]
+    WebStop,
+
+    // ── SD Card ──────────────────────────────────────────
+    #[regex(r"(?i:SD\.INIT)")]
+    SdInit,
+    #[regex(r"(?i:SD\.OPEN)")]
+    SdOpen,
+    #[regex(r"(?i:SD\.WRITE)")]
+    SdWrite,
+    #[regex(r"(?i:SD\.READ\$)")]
+    SdReadStr,
+    #[regex(r"(?i:SD\.CLOSE)")]
+    SdClose,
+    #[regex(r"(?i:SD\.FREE)")]
+    SdFree,
+
+    // ── Async / Yield ────────────────────────────────────
+    #[regex(r"(?i:YIELD)")]
+    Yield,
+    #[regex(r"(?i:AWAIT)")]
+    Await,
+
+    // ── Cron ─────────────────────────────────────────────
+    #[regex(r"(?i:CRON\.ADD)")]
+    CronAdd,
+    #[regex(r"(?i:CRON\.CHECK)")]
+    CronCheck,
+    #[regex(r"(?i:CRON\.REMOVE)")]
+    CronRemove,
+
+    // ── Regex ────────────────────────────────────────────
+    #[regex(r"(?i:REGEX\.MATCH)")]
+    RegexMatch,
+    #[regex(r"(?i:REGEX\.FIND\$)")]
+    RegexFindStr,
+    #[regex(r"(?i:REGEX\.REPLACE\$)")]
+    RegexReplaceStr,
+
+    // ── Bitwise shift ────────────────────────────────────
+    #[regex(r"(?i:SHL)")]
+    Shl,
+    #[regex(r"(?i:SHR)")]
+    Shr,
+
     // ── New language features ─────────────────────────────
     #[regex(r"(?i:ASSERT)")]
     Assert,
@@ -592,6 +646,27 @@ impl std::fmt::Display for TokenKind {
             TokenKind::I2sInit => write!(f, "I2S.INIT"),
             TokenKind::I2sWrite => write!(f, "I2S.WRITE"),
             TokenKind::I2sStop => write!(f, "I2S.STOP"),
+            TokenKind::WebStart => write!(f, "WEB.START"),
+            TokenKind::WebWaitStr => write!(f, "WEB.WAIT$"),
+            TokenKind::WebBodyStr => write!(f, "WEB.BODY$"),
+            TokenKind::WebReply => write!(f, "WEB.REPLY"),
+            TokenKind::WebStop => write!(f, "WEB.STOP"),
+            TokenKind::SdInit => write!(f, "SD.INIT"),
+            TokenKind::SdOpen => write!(f, "SD.OPEN"),
+            TokenKind::SdWrite => write!(f, "SD.WRITE"),
+            TokenKind::SdReadStr => write!(f, "SD.READ$"),
+            TokenKind::SdClose => write!(f, "SD.CLOSE"),
+            TokenKind::SdFree => write!(f, "SD.FREE"),
+            TokenKind::Yield => write!(f, "YIELD"),
+            TokenKind::Await => write!(f, "AWAIT"),
+            TokenKind::CronAdd => write!(f, "CRON.ADD"),
+            TokenKind::CronCheck => write!(f, "CRON.CHECK"),
+            TokenKind::CronRemove => write!(f, "CRON.REMOVE"),
+            TokenKind::RegexMatch => write!(f, "REGEX.MATCH"),
+            TokenKind::RegexFindStr => write!(f, "REGEX.FIND$"),
+            TokenKind::RegexReplaceStr => write!(f, "REGEX.REPLACE$"),
+            TokenKind::Shl => write!(f, "SHL"),
+            TokenKind::Shr => write!(f, "SHR"),
             TokenKind::Assert => write!(f, "ASSERT"),
             TokenKind::Enum => write!(f, "ENUM"),
             TokenKind::Each => write!(f, "EACH"),

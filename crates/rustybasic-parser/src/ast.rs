@@ -732,6 +732,35 @@ pub enum Statement {
     I2sWrite { data: Expr, span: Span },
     I2sStop { span: Span },
 
+    // ── Web Server ───────────────────────────────────────
+    WebStart { port: Expr, span: Span },
+    WebWaitStr { target: String, var_type: QBType, span: Span },
+    WebBodyStr { target: String, var_type: QBType, span: Span },
+    WebReply { status: Expr, body: Expr, span: Span },
+    WebStop { span: Span },
+
+    // ── SD Card ──────────────────────────────────────────
+    SdInit { cs_pin: Expr, span: Span },
+    SdOpen { path: Expr, mode: Expr, span: Span },
+    SdWrite { data: Expr, span: Span },
+    SdReadStr { target: String, var_type: QBType, span: Span },
+    SdClose { span: Span },
+    SdFree { target: String, var_type: QBType, span: Span },
+
+    // ── Async / Yield ────────────────────────────────────
+    YieldStmt { span: Span },
+    AwaitStmt { ms: Expr, span: Span },
+
+    // ── Cron ─────────────────────────────────────────────
+    CronAdd { id: Expr, expr: Expr, span: Span },
+    CronCheck { id: Expr, target: String, var_type: QBType, span: Span },
+    CronRemove { id: Expr, span: Span },
+
+    // ── Regex ────────────────────────────────────────────
+    RegexMatch { pattern: Expr, text: Expr, target: String, var_type: QBType, span: Span },
+    RegexFindStr { pattern: Expr, text: Expr, target: String, var_type: QBType, span: Span },
+    RegexReplaceStr { pattern: Expr, text: Expr, replacement: Expr, target: String, var_type: QBType, span: Span },
+
     /// Array element assignment: arr(i, j) = expr
     ArrayAssign {
         name: String,
@@ -933,6 +962,8 @@ pub enum BinOp {
     And,
     Or,
     Xor,
+    Shl,
+    Shr,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
